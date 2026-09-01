@@ -1,0 +1,12 @@
+# Carpetas de dependencias y compilacion
+node_modules/
+bin/
+obj/
+target/
+.idea/
+.vscode/
+*.env
+
+# Archivos de base de datos locales
+*.db
+*.local
