@@ -11,17 +11,6 @@ public class EntityNotFoundException : DomainException
         : base($"{entityName} with identifier '{key}' was not found.") { }
 }
 
-/*public class InsufficientFundsException : DomainException
-{
-    public InsufficientFundsException(string message = "Available balance is insufficient for this bid.")
-        : base(message) { }
-}*/
-
-public class InvalidBidAmountException : DomainException
-{
-    public InvalidBidAmountException(string message) : base(message) { }
-}
-
 public class ConcurrencyConflictException : DomainException
 {
     public ConcurrencyConflictException(string message = "The record was modified by another transaction. Please try again.")
@@ -31,4 +20,19 @@ public class ConcurrencyConflictException : DomainException
 public class BusinessRuleValidationException : DomainException
 {
     public BusinessRuleValidationException(string message) : base(message) { }
+}
+
+public class InvalidBidAmountException : DomainException
+{
+    public int AuctionId { get; }
+    public decimal BidAmount { get; }
+    public decimal MinRequiredAmount { get; }
+
+    public InvalidBidAmountException(int auctionId, decimal bidAmount, decimal minRequiredAmount)
+        : base($"Bid amount {bidAmount} is insufficient for auction {auctionId}. Minimum required is {minRequiredAmount}.")
+    {
+        AuctionId = auctionId;
+        BidAmount = bidAmount;
+        MinRequiredAmount = minRequiredAmount;
+    }
 }
