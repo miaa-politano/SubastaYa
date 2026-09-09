@@ -14,6 +14,7 @@ public record CreateAuctionRequest(
 
 // Input contract for submitting a bid (POST /api/auctions/{id}/bids)
 public record PlaceBidRequest(
+    int BidderId,
     decimal Amount
 );
 
