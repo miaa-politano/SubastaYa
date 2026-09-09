@@ -1,20 +1,21 @@
 using Microsoft.EntityFrameworkCore;
 using SubastaYa.Api.Middlewares;
+using SubastaYa.Domain.Interfaces;
 using SubastaYa.Infrastructure.Persistence;
+using SubastaYa.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-// Register Database Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<IWalletService, WalletService>();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 app.UseGlobalExceptionHandler();
 
 if (app.Environment.IsDevelopment())
