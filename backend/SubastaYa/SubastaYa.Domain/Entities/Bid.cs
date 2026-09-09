@@ -8,7 +8,6 @@ public class Bid
     public decimal Amount { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
-    // Navigation properties
     public Auction? Auction { get; set; }
     public User? Bidder { get; set; }
 }
