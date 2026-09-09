@@ -13,6 +13,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<IBidService, BidService>();
 
 var app = builder.Build();
 
