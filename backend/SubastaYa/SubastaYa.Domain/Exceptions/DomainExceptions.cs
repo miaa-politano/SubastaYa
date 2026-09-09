@@ -11,11 +11,11 @@ public class EntityNotFoundException : DomainException
         : base($"{entityName} with identifier '{key}' was not found.") { }
 }
 
-public class InsufficientFundsException : DomainException
+/*public class InsufficientFundsException : DomainException
 {
     public InsufficientFundsException(string message = "Available balance is insufficient for this bid.")
         : base(message) { }
-}
+}*/
 
 public class InvalidBidAmountException : DomainException
 {
