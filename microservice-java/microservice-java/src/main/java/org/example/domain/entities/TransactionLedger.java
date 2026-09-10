@@ -24,13 +24,13 @@ public class TransactionLedger {
     @JoinColumn(name = "WALLET_ID", nullable = false)
     private Wallet wallet;
 
-    @Column(name = "TIPO_MOVIMIENTO", nullable = false)
+    @Column(name = "MOVEMENT_TYPE", nullable = false)
     private String movementType;
 
-    @Column(name = "MONTO", nullable = false, precision = 18, scale = 2)
+    @Column(name = "AMOUNT", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "FECHA_PUJA", nullable = false)
+    @Column(name = "BID_DATE", nullable = false)
     private LocalDateTime timestamp;
 
     @Column(name = "SUBASTA_ID")
