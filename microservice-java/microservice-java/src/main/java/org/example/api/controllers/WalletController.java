@@ -2,7 +2,7 @@
  * @author MIA
  * @project SubastaYa - Financial Microservice
  * @sprint Sprint 1
- * @date 2026-09-05 16:52
+ * @date 2026-09-10 10:40
  * @description REST Controller exposing baseline wallet and escrow endpoints.
  */
 package org.example.api.controllers;
@@ -21,7 +21,7 @@ import java.math.BigDecimal;
 @Tag(name = "Wallets", description = "Endpoints for virtual wallet financial management (Escrow)")
 public class WalletController {
 
-    @GetMapping("/balance")
+    @GetMapping
     @Operation(summary = "Get wallet balance breakdown", description = "Returns total, locked, and available balances for the specified user")
     @ApiResponse(responseCode = "200", description = "Balances retrieved successfully")
     public ResponseEntity<WalletBalanceResponse> getBalance(@RequestParam Long userId) {
@@ -33,8 +33,8 @@ public class WalletController {
         return ResponseEntity.ok(mockResponse);
     }
 
-    @PostMapping("/deposit")
-    @Operation(summary = "Simulate funds deposit", description = "Allows uploading mock funds into the user's virtual wallet")
+    @PostMapping("/transactions")
+    @Operation(summary = "Create financial transaction", description = "Allows creating a new ledger movement to upload funds into the user's virtual wallet")
     @ApiResponse(responseCode = "200", description = "Deposit processed successfully")
     @ApiResponse(responseCode = "400", description = "Invalid amount or bad request data")
     public ResponseEntity<Void> deposit(@RequestBody DepositFundsRequest request) {
