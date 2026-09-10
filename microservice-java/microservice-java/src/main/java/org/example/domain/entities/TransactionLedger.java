@@ -2,12 +2,13 @@
  * @author MIA
  * @project SubastaYa - Financial Microservice
  * @sprint Sprint 1
- * @date 2026-09-05 16:52
+ * @date 2026-09-10 20:18
  * @description Persistence entity modeling the immutable transaction audit book.
  */
 package org.example.domain.entities;
 
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -24,26 +25,26 @@ public class TransactionLedger {
     @JoinColumn(name = "WALLET_ID", nullable = false)
     private Wallet wallet;
 
-    @Column(name = "MOVEMENT_TYPE", nullable = false)
+    @Column(name = "TYPE", nullable = false)
     private String movementType;
 
     @Column(name = "AMOUNT", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "BID_DATE", nullable = false)
-    private LocalDateTime timestamp;
+    @Column(name = "DESCRIPTION", nullable = false)
+    private String description;
 
-    @Column(name = "SUBASTA_ID")
-    private Long auctionId;
+    @Column(name = "CREATED_AT_UTC", nullable = false)
+    private LocalDateTime timestamp;
 
     public TransactionLedger() {
     }
 
-    public TransactionLedger(Wallet wallet, String movementType, BigDecimal amount, Long auctionId) {
+    public TransactionLedger(Wallet wallet, String movementType, BigDecimal amount, String description) {
         this.wallet = wallet;
         this.movementType = movementType;
         this.amount = amount;
-        this.auctionId = auctionId;
+        this.description = description;
         this.timestamp = LocalDateTime.now();
     }
 
@@ -63,11 +64,11 @@ public class TransactionLedger {
         return amount;
     }
 
-    public LocalDateTime getTimestamp() {
-        return timestamp;
+    public String getDescription() {
+        return description;
     }
 
-    public Long getAuctionId() {
-        return auctionId;
+    public LocalDateTime getTimestamp() {
+        return timestamp;
     }
 }

@@ -1,15 +1,32 @@
-﻿using SubastaYa.Domain.Exceptions;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
+using SubastaYa.Domain.Exceptions;
 
 namespace SubastaYa.Domain.Entities;
 
+[Table("WALLET")]
 public class Wallet
 {
+    [Key]
+    [Column("ID")]
     public int Id { get; set; }
+
+    [Column("USER_ID")]
     public int UserId { get; set; }
+
+    [Column("TOTAL_BALANCE")]
     public decimal TotalBalance { get; set; }
+
+    [Column("LOCKED_BALANCE")]
     public decimal LockedBalance { get; set; }
+
+    [Column("AVAILABLE_BALANCE")]
     public decimal AvailableBalance { get; set; }
+
+    [ConcurrencyCheck]
+    [Column("VERSION")]
     public uint Version { get; set; }
+
     public User? User { get; set; }
 
     private void RecalculateAvailableBalance()
