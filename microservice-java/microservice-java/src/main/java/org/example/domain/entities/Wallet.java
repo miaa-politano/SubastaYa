@@ -2,7 +2,7 @@
  * @author MIA
  * @project SubastaYa - Financial Microservice
  * @sprint Sprint 1
- * @date 2026-09-05 16:52
+ * @date 2026-09-10 09:55
  * @description Persistence entity mapping the WALLET table with Optimistic Locking.
  */
 package org.example.domain.entities;
@@ -22,13 +22,13 @@ public class Wallet {
     @Column(name = "USER_ID", nullable = false, unique = true)
     private Long userId;
 
-    @Column(name = "SALDE_TOTAL", nullable = false, precision = 18, scale = 2)
+    @Column(name = "TOTAL_BALANCE", nullable = false, precision = 18, scale = 2)
     private BigDecimal totalBalance;
 
-    @Column(name = "SALDO_RETENIDO", nullable = false, precision = 18, scale = 2)
+    @Column(name = "LOCKED_BALANCE", nullable = false, precision = 18, scale = 2)
     private BigDecimal lockedBalance;
 
-    @Column(name = "SALDO_DISPONIBLE", nullable = false, precision = 18, scale = 2)
+    @Column(name = "AVAILABLE_BALANCE", nullable = false, precision = 18, scale = 2)
     private BigDecimal availableBalance;
 
     @Version
