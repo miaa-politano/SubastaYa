@@ -1,21 +1,51 @@
-﻿using SubastaYa.Domain.Exceptions;
+﻿using System.ComponentModel.DataAnnotations.Schema; // Requerido para [Column]
+using System.ComponentModel.DataAnnotations;
+using SubastaYa.Domain.Exceptions;
 
 namespace SubastaYa.Domain.Entities;
 
+[Table("AUCTION")]
 public class Auction
 {
+    [Key]
+    [Column("ID")]
     public int Id { get; set; }
+
+    [Column("SELLER_ID")]
     public int SellerId { get; set; }
+
+    [Column("CURRENT_WINNER_ID")]
     public int? CurrentWinnerId { get; set; }
+
+    [Column("CATEGORY_ID")]
     public int CategoryId { get; set; }
+
+    [Column("TITLE")]
     public string Title { get; set; } = string.Empty;
+
+    [Column("DESCRIPTION")]
     public string Description { get; set; } = string.Empty;
+
+    [Column("STARTING_PRICE")]
     public decimal StartingPrice { get; set; }
+
+    [Column("CURRENT_PRICE")]
     public decimal CurrentPrice { get; set; }
+
+    [Column("MIN_INCREMENT")]
     public decimal MinIncrement { get; set; } = 10;
+
+    [Column("START_DATE_UTC")]
     public DateTime StartDateUtc { get; set; }
+
+    [Column("END_DATE_UTC")]
     public DateTime EndDateUtc { get; set; }
+
+    [Column("STATUS")]
     public string Status { get; set; } = "Active";
+
+    [ConcurrencyCheck]
+    [Column("VERSION")]
     public uint Version { get; set; }
 
     public User? Seller { get; set; }
