@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema; // Requerido para [Column]
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using SubastaYa.Domain.Exceptions;
 
