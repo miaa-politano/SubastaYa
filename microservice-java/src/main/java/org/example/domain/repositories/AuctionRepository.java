@@ -8,7 +8,6 @@
 package org.example.domain.repositories;
 
 import org.example.domain.entities.Auction;
-import org.example.domain.entities.Category;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,7 +17,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 
 @Repository
-public interface AuctionRepository extends JpaRepository<Auction, Long> {
+public interface AuctionRepository extends JpaRepository<Auction, Integer> {
 
     @Query("SELECT a FROM Auction a WHERE " +
             "(:categoryId IS NULL OR a.category.id = :categoryId) AND " +
@@ -26,7 +25,7 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
             "(:minPrice IS NULL OR a.currentPrice >= :minPrice) AND " +
             "(:maxPrice IS NULL OR a.currentPrice <= :maxPrice)")
     Page<Auction> findByFiltersPaginated(
-            @Param("categoryId") Long categoryId,
+            @Param("categoryId") Integer categoryId,
             @Param("status") String status,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,
