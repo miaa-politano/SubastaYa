@@ -17,7 +17,7 @@ public class AuditServiceImpl implements AuditService {
 
     @Override
     @Transactional
-    public void logStateChange(Long auctionId, String previousState, String newState, String message) {
+    public void logStateChange(Integer auctionId, String previousState, String newState, String message) {
         auditLogRepository.save(new AuditLog(auctionId, "STATE_CHANGE", previousState, newState, message));
     }
 
