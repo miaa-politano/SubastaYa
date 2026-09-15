@@ -12,7 +12,7 @@ public class AuditLog {
     private Long id;
 
     @Column(name = "auction_id", nullable = false)
-    private Long auctionId;
+    private Integer auctionId;
 
     @Column(name = "event_type", nullable = false)
     private String eventType;
@@ -32,7 +32,7 @@ public class AuditLog {
     protected AuditLog() {
     }
 
-    public AuditLog(Long auctionId, String eventType, String previousState, String newState, String message) {
+    public AuditLog(Integer auctionId, String eventType, String previousState, String newState, String message) {
         this.auctionId = auctionId;
         this.eventType = eventType;
         this.previousState = previousState;
@@ -45,7 +45,7 @@ public class AuditLog {
         return id;
     }
 
-    public Long getAuctionId() {
+    public Integer getAuctionId() {
         return auctionId;
     }
 

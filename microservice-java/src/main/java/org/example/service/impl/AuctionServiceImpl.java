@@ -23,16 +23,16 @@ public class AuctionServiceImpl implements AuctionService {
     }
 
     @Override
-    public Page<Auction> getCatalog(Long categoryId, String status, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+    public Page<Auction> getCatalog(Integer categoryId, String status, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
         BigDecimal finalMinPrice = (minPrice == null) ? BigDecimal.ZERO : minPrice;
         BigDecimal finalMaxPrice = (maxPrice == null) ? new BigDecimal("9999999999") : maxPrice;
 
         if (finalMinPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("El precio mínimo de búsqueda no puede ser negativo.");
+            throw new IllegalArgumentException("Minimum search price cannot be negative.");
         }
 
         if (finalMaxPrice.compareTo(finalMinPrice) < 0) {
-            throw new IllegalArgumentException("El precio máximo de búsqueda no puede ser menor que el precio mínimo.");
+            throw new IllegalArgumentException("Maximum search price cannot be less than minimum price.");
         }
 
         return auctionRepository.findByFiltersPaginated(categoryId, status, finalMinPrice, finalMaxPrice, pageable);
@@ -42,7 +42,7 @@ public class AuctionServiceImpl implements AuctionService {
     @Transactional
     public Auction createAuction(CreateAuctionRequest request) {
         if (request.endDateUtc().isBefore(request.startDateUtc()) || request.endDateUtc().isEqual(request.startDateUtc())) {
-            throw new IllegalArgumentException("La fecha de finalización debe ser posterior a la fecha de inicio.");
+            throw new IllegalArgumentException("End date must be after start date.");
         }
 
         Auction auction = new Auction();
@@ -57,13 +57,7 @@ public class AuctionServiceImpl implements AuctionService {
 
         Auction savedAuction = auctionRepository.save(auction);
 
-        // Registramos el evento inicial en el log inmutable de auditoría usando el id Long nativo
-        auditService.logStateChange(
-                savedAuction.getId(),
-                null,
-                "PROGRAMMED",
-                "Subasta creada e inicializada en estado programado automáticamente."
-        );
+        auditService.logStateChange(savedAuction.getId(), "", "PROGRAMMED", "Auction created and initialized as PROGRAMMED");
 
         return savedAuction;
     }
