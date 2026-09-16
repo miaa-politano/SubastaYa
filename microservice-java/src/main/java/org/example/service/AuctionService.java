@@ -11,4 +11,6 @@ public interface AuctionService {
     Page<Auction> getCatalog(Integer categoryId, String status, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
 
     Auction createAuction(CreateAuctionRequest request);
+
+    void liquidateExpiredAuction(Auction auction);
 }
