@@ -4,6 +4,7 @@ import org.example.api.contracts.CreateAuctionRequest;
 import org.example.domain.entities.Auction;
 import org.example.domain.repositories.AuctionRepository;
 import org.example.service.AuctionService;
+import org.example.service.AuditService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,9 +15,11 @@ import java.math.BigDecimal;
 public class AuctionServiceImpl implements AuctionService {
 
     private final AuctionRepository auctionRepository;
+    private final AuditService auditService;
 
-    public AuctionServiceImpl(AuctionRepository auctionRepository) {
+    public AuctionServiceImpl(AuctionRepository auctionRepository, AuditService auditService) {
         this.auctionRepository = auctionRepository;
+        this.auditService = auditService;
     }
 
     @Override
@@ -25,11 +28,11 @@ public class AuctionServiceImpl implements AuctionService {
         BigDecimal finalMaxPrice = (maxPrice == null) ? new BigDecimal("9999999999") : maxPrice;
 
         if (finalMinPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("El precio mínimo de búsqueda no puede ser negativo.");
+            throw new IllegalArgumentException("Minimum search price cannot be negative.");
         }
 
         if (finalMaxPrice.compareTo(finalMinPrice) < 0) {
-            throw new IllegalArgumentException("El precio máximo de búsqueda no puede ser menor que el precio mínimo.");
+            throw new IllegalArgumentException("Maximum search price cannot be less than minimum price.");
         }
 
         return auctionRepository.findByFiltersPaginated(categoryId, status, finalMinPrice, finalMaxPrice, pageable);
@@ -39,7 +42,7 @@ public class AuctionServiceImpl implements AuctionService {
     @Transactional
     public Auction createAuction(CreateAuctionRequest request) {
         if (request.endDateUtc().isBefore(request.startDateUtc()) || request.endDateUtc().isEqual(request.startDateUtc())) {
-            throw new IllegalArgumentException("La fecha de finalización debe ser posterior a la fecha de inicio.");
+            throw new IllegalArgumentException("End date must be after start date.");
         }
 
         Auction auction = new Auction();
@@ -52,6 +55,10 @@ public class AuctionServiceImpl implements AuctionService {
         auction.setEndDateUtc(request.endDateUtc());
         auction.setStatus("PROGRAMMED");
 
-        return auctionRepository.save(auction);
+        Auction savedAuction = auctionRepository.save(auction);
+
+        auditService.logStateChange(savedAuction.getId(), "", "PROGRAMMED", "Auction created and initialized as PROGRAMMED");
+
+        return savedAuction;
     }
 }
