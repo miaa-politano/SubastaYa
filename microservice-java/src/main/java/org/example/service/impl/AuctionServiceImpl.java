@@ -8,6 +8,7 @@ import org.example.domain.repositories.AuctionRepository;
 import org.example.domain.repositories.WalletRepository;
 import org.example.domain.repositories.TransactionLedgerRepository;
 import org.example.service.AuctionService;
+import org.example.service.AuditService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,14 +22,17 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionRepository auctionRepository;
     private final WalletRepository walletRepository;
     private final TransactionLedgerRepository transactionLedgerRepository;
+    private final AuditService auditService;
 
     public AuctionServiceImpl(
             AuctionRepository auctionRepository,
             WalletRepository walletRepository,
-            TransactionLedgerRepository transactionLedgerRepository) {
+            TransactionLedgerRepository transactionLedgerRepository,
+            AuditService auditService) {
         this.auctionRepository = auctionRepository;
         this.walletRepository = walletRepository;
         this.transactionLedgerRepository = transactionLedgerRepository;
+        this.auditService = auditService;
     }
 
     @Override
@@ -37,11 +41,11 @@ public class AuctionServiceImpl implements AuctionService {
         BigDecimal finalMaxPrice = (maxPrice == null) ? new BigDecimal("9999999999") : maxPrice;
 
         if (finalMinPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("El precio minimo de busqueda no puede ser negativo.");
+            throw new IllegalArgumentException("Minimum search price cannot be negative.");
         }
 
         if (finalMaxPrice.compareTo(finalMinPrice) < 0) {
-            throw new IllegalArgumentException("El precio maximo de busqueda no puede ser menor que el precio minimo.");
+            throw new IllegalArgumentException("Maximum search price cannot be less than minimum price.");
         }
 
         return auctionRepository.findByFiltersPaginated(categoryId, status, finalMinPrice, finalMaxPrice, pageable);
@@ -51,11 +55,11 @@ public class AuctionServiceImpl implements AuctionService {
     @Transactional
     public Auction createAuction(CreateAuctionRequest request) {
         if (request.endDateUtc().isBefore(request.startDateUtc()) || request.endDateUtc().isEqual(request.startDateUtc())) {
-            throw new IllegalArgumentException("La fecha de finalizacion debe ser posterior a la fecha de inicio.");
+            throw new IllegalArgumentException("End date must be after start date.");
         }
 
         if (request.startingPrice().compareTo(BigDecimal.ZERO) <= 0 || request.minIncrement().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("El precio inicial y el incremento minimo deben ser mayores a cero.");
+            throw new IllegalArgumentException("Starting price and minimum increment must be greater than zero.");
         }
 
         Auction auction = new Auction();
@@ -69,7 +73,11 @@ public class AuctionServiceImpl implements AuctionService {
         auction.setEndDateUtc(request.endDateUtc());
         auction.setStatus("PROXIMAS");
 
-        return auctionRepository.save(auction);
+        Auction savedAuction = auctionRepository.save(auction);
+
+        auditService.logStateChange(savedAuction.getId(), "", "PROXIMAS", "Auction created and initialized as PROXIMAS");
+
+        return savedAuction;
     }
 
     @Override
@@ -109,8 +117,10 @@ public class AuctionServiceImpl implements AuctionService {
             transactionLedgerRepository.save(sellerLog);
 
             auction.setStatus("FINALIZED");
+            auditService.logStateChange(auction.getId(), "ACTIVE", "FINALIZED", "Auction processed by worker and closed with winner");
         } else {
             auction.setStatus("DESERTED");
+            auditService.logStateChange(auction.getId(), "ACTIVE", "DESERTED", "Auction processed by worker and closed with no bids");
         }
 
         auctionRepository.save(auction);

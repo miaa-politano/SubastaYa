@@ -11,11 +11,16 @@ public class BidService : IBidService
 {
     private readonly ApplicationDbContext _context;
     private readonly IWalletService _walletService;
+    private readonly IAuctionNotificationService _notificationService;
 
-    public BidService(ApplicationDbContext context, IWalletService walletService)
+    public BidService(
+        ApplicationDbContext context,
+        IWalletService walletService,
+        IAuctionNotificationService notificationService)
     {
         _context = context;
         _walletService = walletService;
+        _notificationService = notificationService;
     }
 
     public async Task<BidResultDto> PlaceBidAsync(int auctionId, int bidderId, decimal amount, CancellationToken cancellationToken = default)
@@ -57,8 +62,40 @@ public class BidService : IBidService
 
             auction.ApplyNewWinningBid(bidderId, amount);
 
+            var now = DateTime.UtcNow;
+            var timeRemaining = auction.EndDateUtc - now;
+            var wasExtended = false;
+
+            if (timeRemaining <= TimeSpan.FromSeconds(60))
+            {
+                auction.EndDateUtc = auction.EndDateUtc.AddMinutes(2);
+                wasExtended = true;
+            }
+
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+
+            var bidder = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == bidderId, cancellationToken);
+
+            var bidderUsername = bidder?.Name ?? $"User_{bidderId}";
+
+            await _notificationService.NotifyNewBidAsync(
+                auction.Id,
+                amount,
+                bidderUsername,
+                newBid.CreatedAtUtc
+            );
+
+            if (wasExtended)
+            {
+                await _notificationService.NotifyTimeExtendedAsync(
+                    auction.Id,
+                    auction.EndDateUtc,
+                    "Anti-sniping: puja en el último minuto."
+                );
+            }
 
             return new BidResultDto
             {
