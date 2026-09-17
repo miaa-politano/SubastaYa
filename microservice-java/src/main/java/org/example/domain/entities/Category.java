@@ -14,7 +14,7 @@ public class Category {
     @Column(name = "NAME", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "DESCRIPTION", nullable = false, length = 255)
+    @Column(name = "DESCRIPTION", nullable = false)
     private String description;
 
     @Version
