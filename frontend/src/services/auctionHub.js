@@ -36,7 +36,6 @@ export const createAuctionHubConnection = (auctionId, handlers = {}, onStatusCha
         if (onStatusChange) onStatusChange('disconnected');
     });
 
-    // Intento de conexión inicial
     connection
         .start()
         .then(async () => {
