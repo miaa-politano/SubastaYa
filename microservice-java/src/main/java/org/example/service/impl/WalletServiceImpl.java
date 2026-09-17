@@ -38,7 +38,6 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional
     public void depositFunds(DepositFundsRequest request) {
-        // Conversión explícita de Long a Integer para unificar las capas relacionales
         Integer mappedUserId = (request.userId() != null) ? request.userId().intValue() : null;
 
         Wallet wallet = walletRepository.findByUserId(mappedUserId)
