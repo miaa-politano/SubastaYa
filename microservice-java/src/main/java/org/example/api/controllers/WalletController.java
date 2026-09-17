@@ -1,18 +1,12 @@
-/**
- * @author MIA
- * @project SubastaYa - Financial Microservice
- * @sprint Sprint 1
- * @date 2026-09-10 10:40
- * @description REST Controller exposing baseline wallet and escrow endpoints.
- */
 package org.example.api.controllers;
 
+import jakarta.validation.Valid;
 import org.example.api.contracts.DepositFundsRequest;
 import org.example.api.contracts.WalletBalanceResponse;
+import org.example.service.WalletService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
 
@@ -21,26 +15,33 @@ import java.math.BigDecimal;
 @Tag(name = "Wallets", description = "Endpoints for virtual wallet financial management (Escrow)")
 public class WalletController {
 
+    private final WalletService walletService;
+
+    public WalletController(WalletService walletService) {
+        this.walletService = walletService;
+    }
+
     @GetMapping
-    @Operation(summary = "Get wallet balance breakdown", description = "Returns total, locked, and available balances for the specified user")
-    @ApiResponse(responseCode = "200", description = "Balances retrieved successfully")
-    public ResponseEntity<WalletBalanceResponse> getBalance(@RequestParam Long userId) {
-        WalletBalanceResponse mockResponse = new WalletBalanceResponse(
-                new BigDecimal("555000.00"),
-                new BigDecimal("450000.00"),
-                new BigDecimal("105000.00")
-        );
-        return ResponseEntity.ok(mockResponse);
+    @Operation(summary = "Get wallet balance breakdown")
+    public ResponseEntity<WalletBalanceResponse> getBalance(@RequestParam Integer userId) {
+        try {
+            return ResponseEntity.ok(walletService.getUserBalance(userId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping("/transactions")
-    @Operation(summary = "Create financial transaction", description = "Allows creating a new ledger movement to upload funds into the user's virtual wallet")
-    @ApiResponse(responseCode = "200", description = "Deposit processed successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid amount or bad request data")
-    public ResponseEntity<Void> deposit(@RequestBody DepositFundsRequest request) {
+    @Operation(summary = "Create financial transaction")
+    public ResponseEntity<?> deposit(@Valid @RequestBody DepositFundsRequest request) {
         if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body("El monto de deposito debe ser mayor a cero.");
         }
-        return ResponseEntity.ok().build();
+        try {
+            walletService.depositFunds(request);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
