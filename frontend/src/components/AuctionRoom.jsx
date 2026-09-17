@@ -14,7 +14,6 @@ export const AuctionRoom = ({ auctionId = 1, initialPrice = 1450000 }) => {
     const [connectionStatus, setConnectionStatus] = useState('connecting');
     const [notification, setNotification] = useState(null);
 
-    // Manejadores centralizados para SignalR y para la simulación local
     const handleIncomingBid = (auctionIdReceived, amount, bidderUsername, timestamp) => {
         if (Number(auctionIdReceived) !== Number(auctionId)) return;
 
@@ -67,7 +66,7 @@ export const AuctionRoom = ({ auctionId = 1, initialPrice = 1450000 }) => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
-            {/* Contenedor Principal de la Sala */}
+            {}
             <div className="p-6 bg-slate-900 text-white rounded-xl shadow-xl border border-slate-800">
                 <header className="flex justify-between items-center border-b border-slate-800 pb-4 mb-6">
                     <div>
@@ -75,7 +74,7 @@ export const AuctionRoom = ({ auctionId = 1, initialPrice = 1450000 }) => {
                         <h2 className="text-2xl font-bold tracking-tight">Subasta #{auctionId}</h2>
                     </div>
 
-                    {/* Badge de Conexión SignalR */}
+                    {}
                     <div>
                         {connectionStatus === 'connected' && (
                             <span className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -98,7 +97,7 @@ export const AuctionRoom = ({ auctionId = 1, initialPrice = 1450000 }) => {
                     </div>
                 </header>
 
-                {/* Notificaciones Dinámicas Anti-Sniping / Cierre */}
+                {}
                 {notification && (
                     <div
                         className={`mb-6 p-4 rounded-lg text-sm font-medium border animate-fade-in ${
@@ -111,7 +110,7 @@ export const AuctionRoom = ({ auctionId = 1, initialPrice = 1450000 }) => {
                     </div>
                 )}
 
-                {/* Panel de Métricas */}
+                {}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div className="bg-slate-950/60 p-6 rounded-lg border border-slate-800 flex flex-col justify-center items-center text-center">
                         <span className="text-slate-400 text-sm font-medium">Mayor Oferta Actual</span>
@@ -149,7 +148,7 @@ export const AuctionRoom = ({ auctionId = 1, initialPrice = 1450000 }) => {
                     </div>
                 </div>
 
-                {/* Panel de Pruebas y Simulación (Ideal para revisar la UI antes del merge del backend) */}
+                {}
                 <div className="border-t border-slate-800 pt-4 mt-6">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-3">
             Controles de Prueba UI (TASK-018)
