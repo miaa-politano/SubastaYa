@@ -1,4 +1,5 @@
 import React from 'react';
+import Wallet from './components/Wallet.jsx';
 import { AuctionCard } from './components/AuctionCard.jsx';
 
 const MOCK_AUCTIONS = [
@@ -6,28 +7,28 @@ const MOCK_AUCTIONS = [
     id: 1,
     title: 'Notebook Gamer Lenovo Legion Pro 5',
     categoryName: 'Tecnología',
-    imageUrl: 'https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500&q=80',
+    imageUrl: 'https://unsplash.com',
     highestBid: 1450000,
     totalBids: 14,
-    endDate: new Date(Date.now() + 25 * 60 * 1000).toISOString() // Cierra en 25 minutos
+    endDate: new Date(Date.now() + 25 * 60 * 1000).toISOString()
   },
   {
     id: 2,
     title: 'Consola Retro GameBoy Color Atomic Purple',
     categoryName: 'Coleccionables',
-    imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500&q=80',
+    imageUrl: 'https://unsplash.com',
     highestBid: 280000,
     totalBids: 8,
-    endDate: new Date(Date.now() + 45 * 1000).toISOString() // Cierra en 45 seg (Zona crítica roja)
+    endDate: new Date(Date.now() + 45 * 1000).toISOString()
   },
   {
     id: 3,
     title: 'Camiseta Oficial Selección Argentina 1986',
     categoryName: 'Indumentaria',
-    imageUrl: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=500&q=80',
+    imageUrl: 'https://unsplash.com',
     highestBid: 950000,
     totalBids: 22,
-    endDate: new Date(Date.now() - 10000).toISOString() // Ya finalizada
+    endDate: new Date(Date.now() - 10000).toISOString()
   }
 ];
 
@@ -42,6 +43,10 @@ export default function App() {
             Catálogo de subastas en vivo respaldadas con saldo real en garantía
           </p>
         </header>
+
+        <section className="max-w-6xl mx-auto mb-12">
+          <Wallet />
+        </section>
 
         <section className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {MOCK_AUCTIONS.map((auction) => (
