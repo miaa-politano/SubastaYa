@@ -1,4 +1,4 @@
-﻿/* cSpell:disable */
+/* cSpell:disable */
 import { useState, useEffect, useCallback } from 'react';
 import { createAuctionHubConnection } from '../services/auctionHub';
 import { useToast } from '../context/ToastContext';
