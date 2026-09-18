@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+﻿/* cSpell:disable */
+import { useState } from 'react';
 import { BidItem } from './activity/BidItem';
 import { PublicationItem } from './activity/PublicationItem';
 
@@ -45,8 +46,8 @@ export const UserActivity = ({ onSelectAuction }) => {
             initialPrice: 800000,
             currentHighestBid: 920000,
             totalBids: 8,
-            status: 'active',
-            endDate: 'En 3 días'
+            status: 'completed',
+            endDate: 'Finalizada'
         },
         {
             id: 102,

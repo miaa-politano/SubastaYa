@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from 'react';
+/* cSpell:disable */
+import { useState, useEffect, useCallback } from 'react';
 import { createAuctionHubConnection } from '../services/auctionHub';
 import { useToast } from '../context/ToastContext';
 
@@ -16,8 +17,9 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
             timestamp: new Date().toLocaleTimeString()
         }
     ]);
+    const [isSimulatingNetwork, setIsSimulatingNetwork] = useState(false);
 
-    const handleIncomingBid = (auctionIdReceived, amount, bidderUsername, timestamp, bidderId = null) => {
+    const handleIncomingBid = useCallback((auctionIdReceived, amount, bidderUsername, timestamp, bidderId = null) => {
         if (Number(auctionIdReceived) !== Number(auctionId)) return;
 
         setCurrentPrice(amount);
@@ -45,17 +47,28 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
             },
             ...prev
         ]);
-    };
+    }, [auctionId, currentUserId, addToast]);
 
-    const handleTimeExtended = (auctionIdReceived, newEndDate, reason) => {
+    const handleTimeExtended = useCallback((auctionIdReceived, newEndDate, reason) => {
         if (Number(auctionIdReceived) !== Number(auctionId)) return;
         if (onAntiSnipingExtend) onAntiSnipingExtend();
         addToast(`⏳ Anti-Sniping activado: Subasta extendida +2 minutos (${reason || 'Oferta en último minuto'}).`, 'warning', 6000);
-    };
+    }, [auctionId, onAntiSnipingExtend, addToast]);
 
-    const handleAuctionClosed = (auctionIdReceived, winnerUsername, finalAmount) => {
+    const handleAuctionClosed = useCallback((auctionIdReceived, winnerUsername, finalAmount) => {
         if (Number(auctionIdReceived) !== Number(auctionId)) return;
         addToast(`🏆 Subasta finalizada. Ganador: ${winnerUsername} ($${Number(finalAmount).toLocaleString()})`, 'info', 7000);
+    }, [auctionId, addToast]);
+
+    const handleBidSubmit = async (amount) => {
+        setIsSimulatingNetwork(true);
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                setIsSimulatingNetwork(false);
+                handleIncomingBid(auctionId, amount, currentUserId, new Date().toISOString(), currentUserId);
+                resolve();
+            }, 1000);
+        });
     };
 
     useEffect(() => {
@@ -68,16 +81,20 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
         const connection = createAuctionHubConnection(auctionId, handlers, setConnectionStatus);
 
         return () => {
-            if (connection) connection.stop();
+            if (connection) {
+                connection.stop().catch(() => {});
+            }
         };
-    }, [auctionId, currentUserId]);
+    }, [auctionId, handleIncomingBid, handleTimeExtended, handleAuctionClosed]);
 
     return {
         currentPrice,
         connectionStatus,
         leadershipStatus,
         bidsHistory,
+        isSimulatingNetwork,
         handleIncomingBid,
-        handleTimeExtended
+        handleTimeExtended,
+        handleBidSubmit
     };
 };

@@ -11,7 +11,7 @@ export const AuctionUxTestingPanel = ({
     return (
         <div className="border-t border-slate-800 pt-4 mt-6">
       <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-3">
-        Validación de UX / Resiliencia de Red (TASK-027)
+        Validación de UX / Resiliencia de Red
       </span>
             <div className="flex flex-wrap gap-2.5">
                 <button
