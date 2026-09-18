@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+/* cSpell:disable */
+import { useState } from 'react';
 import { AuctionRoom } from './components/AuctionRoom';
 import { UserActivity } from './components/UserActivity';
 import { ToastProvider } from './context/ToastContext';
@@ -6,6 +7,12 @@ import { ToastProvider } from './context/ToastContext';
 function AppContent() {
   const [currentView, setCurrentView] = useState('catalog');
   const [selectedAuctionId, setSelectedAuctionId] = useState(1);
+
+  const currentUser = {
+    id: 'user-comprador',
+    name: 'Comprador_General',
+    balance: 5000000
+  };
 
   const mockAuctions = [
     { id: 1, title: 'Notebook Gamer RTX 4060', price: 1450000, bids: 12, closesIn: '2 horas' },
@@ -25,7 +32,7 @@ function AppContent() {
             <div className="flex items-center gap-6">
               <h1
                   onClick={() => setCurrentView('catalog')}
-                  className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 cursor-pointer"
+                  className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-blue-500 cursor-pointer"
               >
                 SubastaYa
               </h1>
@@ -53,10 +60,14 @@ function AppContent() {
               </nav>
             </div>
 
-            <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400">
-              Usuario: <strong className="text-slate-200">Mateo</strong>
-            </span>
+            <div className="flex items-center gap-4">
+              <div className="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 text-xs">
+                <span className="text-slate-400">Billetera:</span>
+                <strong className="text-emerald-400">${currentUser.balance.toLocaleString('es-AR')}</strong>
+              </div>
+              <span className="text-xs text-slate-400">
+                Usuario: <strong className="text-slate-200">{currentUser.name}</strong>
+              </span>
             </div>
           </div>
         </header>
@@ -70,7 +81,11 @@ function AppContent() {
                 >
                   ← Volver al catálogo
                 </button>
-                <AuctionRoom auctionId={selectedAuctionId} />
+                <AuctionRoom
+                    auctionId={selectedAuctionId}
+                    currentUserId={currentUser.id}
+                    walletBalance={currentUser.balance}
+                />
               </div>
           )}
 
@@ -105,8 +120,8 @@ function AppContent() {
                           <div>
                             <span className="text-[10px] text-slate-400 block">Oferta Actual</span>
                             <span className="text-xl font-extrabold text-emerald-400">
-                        ${item.price.toLocaleString()}
-                      </span>
+                              ${item.price.toLocaleString()}
+                            </span>
                           </div>
 
                           <button
@@ -126,7 +141,7 @@ function AppContent() {
   );
 }
 
-function App() {
+export function App() {
   return (
       <ToastProvider>
         <AppContent />
