@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { AuctionRoom } from './components/AuctionRoom';
 import { UserActivity } from './components/UserActivity';
+import { ToastProvider } from './context/ToastContext';
 
-function App() {
+function AppContent() {
   const [currentView, setCurrentView] = useState('catalog');
   const [selectedAuctionId, setSelectedAuctionId] = useState(1);
 
@@ -19,7 +20,7 @@ function App() {
 
   return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-        <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
+        <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-40">
           <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center gap-6">
               <h1
@@ -122,6 +123,14 @@ function App() {
           )}
         </main>
       </div>
+  );
+}
+
+function App() {
+  return (
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
   );
 }
 
