@@ -1,4 +1,4 @@
-﻿/* cSpell:disable */
+/* cSpell:disable */
 import { useState, useEffect } from 'react';
 import { useToast } from '../context/ToastContext';
 import { useAuctionSocket } from '../hooks/useAuctionSocket';
@@ -32,8 +32,8 @@ export const AuctionRoom = ({
         leadershipStatus,
         bidsHistory,
         isSimulatingNetwork,
-        handleTimeExtended,
         handleIncomingBid,
+        handleTimeExtended,
         handleBidSubmit
     } = useAuctionSocket(auctionId, initialPrice, currentUserId, () => {
         setTimeLeft((prev) => prev + 120);
