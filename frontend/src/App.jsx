@@ -1,24 +1,34 @@
-/* cSpell:disable */
-import { useState } from 'react';
-import { AuctionRoom } from './components/AuctionRoom';
-import { UserActivity } from './components/UserActivity';
-import { ToastProvider } from './context/ToastContext';
+import { useState, useEffect } from 'react';
+import { AuctionRoom } from './components/Auction/AuctionRoom.jsx';
+import { UserActivity } from './components/Activity/UserActivity.jsx';
+import { AuctionCard } from './components/Auction/AuctionCard.jsx';
+import { ToastProvider } from './Context/ToastContext';
+import Wallet from './components/Wallet/Wallet.jsx';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('catalog');
   const [selectedAuctionId, setSelectedAuctionId] = useState(1);
+  const [auctions, setAuctions] = useState([]);
+  const [userBalance, setUserBalance] = useState(0);
 
   const currentUser = {
-    id: 'user-comprador',
-    name: 'Comprador_General',
-    balance: 5000000
+    id: 2,
+    name: 'Comprador_General'
   };
 
-  const mockAuctions = [
-    { id: 1, title: 'Notebook Gamer RTX 4060', price: 1450000, bids: 12, closesIn: '2 horas' },
-    { id: 2, title: 'Monitor 27" 165Hz IPS', price: 350000, bids: 8, closesIn: '45 minutos' },
-    { id: 3, title: 'Teclado Mecánico Wireless', price: 85000, bids: 5, closesIn: 'Finalizada' }
-  ];
+  useEffect(() => {
+    fetch(`http://localhost:8080/api/wallet/balance?userId=${currentUser.id}`)
+        .then((res) => res.json())
+        .then((data) => setUserBalance(data.availableBalance || 0))
+        .catch((err) => console.error("Error fetching balance:", err));
+  }, [currentView, currentUser.id]);
+
+  useEffect(() => {
+    fetch('http://localhost:8080/api/auctions?page=0&size=10')
+        .then((res) => res.json())
+        .then((data) => setAuctions(data.content || []))
+        .catch((err) => console.error("Error fetching catalog:", err));
+  }, [currentView]);
 
   const handleOpenRoom = (auctionId) => {
     setSelectedAuctionId(auctionId);
@@ -40,9 +50,7 @@ function AppContent() {
                 <button
                     onClick={() => setCurrentView('catalog')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                        currentView === 'catalog'
-                            ? 'bg-slate-800 text-cyan-400'
-                            : 'text-slate-400 hover:text-slate-200'
+                        currentView === 'catalog' ? 'bg-slate-800 text-cyan-400' : 'text-slate-400 hover:text-slate-200'
                     }`}
                 >
                   Catálogo
@@ -50,20 +58,26 @@ function AppContent() {
                 <button
                     onClick={() => setCurrentView('activity')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                        currentView === 'activity'
-                            ? 'bg-slate-800 text-cyan-400'
-                            : 'text-slate-400 hover:text-slate-200'
+                        currentView === 'activity' ? 'bg-slate-800 text-cyan-400' : 'text-slate-400 hover:text-slate-200'
                     }`}
                 >
                   Mi Actividad
+                </button>
+                <button
+                    onClick={() => setCurrentView('wallet')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                        currentView === 'wallet' ? 'bg-slate-800 text-cyan-400' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                >
+                  Billetera
                 </button>
               </nav>
             </div>
 
             <div className="flex items-center gap-4">
               <div className="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 text-xs">
-                <span className="text-slate-400">Billetera:</span>
-                <strong className="text-emerald-400">${currentUser.balance.toLocaleString('es-AR')}</strong>
+                <span className="text-slate-400">Disponible:</span>
+                <strong className="text-emerald-400">${userBalance.toLocaleString('es-AR')}</strong>
               </div>
               <span className="text-xs text-slate-400">
                 Usuario: <strong className="text-slate-200">{currentUser.name}</strong>
@@ -84,13 +98,17 @@ function AppContent() {
                 <AuctionRoom
                     auctionId={selectedAuctionId}
                     currentUserId={currentUser.id}
-                    walletBalance={currentUser.balance}
+                    walletBalance={userBalance}
                 />
               </div>
           )}
 
           {currentView === 'activity' && (
               <UserActivity onSelectAuction={handleOpenRoom} />
+          )}
+
+          {currentView === 'wallet' && (
+              <Wallet />
           )}
 
           {currentView === 'catalog' && (
@@ -101,37 +119,12 @@ function AppContent() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {mockAuctions.map((item) => (
-                      <div
+                  {auctions.map((item) => (
+                      <AuctionCard
                           key={item.id}
-                          className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-cyan-500/50 transition-all flex flex-col justify-between group shadow-lg"
-                      >
-                        <div className="space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                      Subasta #{item.id}
-                    </span>
-                          <h3 className="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">
-                            {item.title}
-                          </h3>
-                          <p className="text-xs text-slate-500">Cierre estimado: {item.closesIn}</p>
-                        </div>
-
-                        <div className="mt-6 pt-4 border-t border-slate-800 flex justify-between items-end">
-                          <div>
-                            <span className="text-[10px] text-slate-400 block">Oferta Actual</span>
-                            <span className="text-xl font-extrabold text-emerald-400">
-                              ${item.price.toLocaleString()}
-                            </span>
-                          </div>
-
-                          <button
-                              onClick={() => handleOpenRoom(item.id)}
-                              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
-                          >
-                            Ingresar
-                          </button>
-                        </div>
-                      </div>
+                          auction={item}
+                          onOpenRoom={handleOpenRoom}
+                      />
                   ))}
                 </div>
               </div>

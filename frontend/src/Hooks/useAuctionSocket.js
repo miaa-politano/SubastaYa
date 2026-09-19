@@ -1,7 +1,7 @@
 /* cSpell:disable */
 import { useState, useEffect, useCallback } from 'react';
-import { createAuctionHubConnection } from '../services/auctionHub';
-import { useToast } from '../context/ToastContext';
+import { createAuctionHubConnection } from '../Services/AuctionHub.js';
+import { useToast } from '../Context/ToastContext';
 
 export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiSnipingExtend) => {
     const { addToast } = useToast();
