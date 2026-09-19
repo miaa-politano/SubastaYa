@@ -1,6 +1,7 @@
 package org.example.domain.entities;
 
 import jakarta.persistence.*;
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Entity
@@ -9,24 +10,25 @@ public class AuditLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ID")
     private Long id;
 
-    @Column(name = "auction_id", nullable = false)
+    @Column(name = "AUCTION_ID", nullable = false)
     private Integer auctionId;
 
-    @Column(name = "event_type", nullable = false)
+    @Column(name = "EVENT_TYPE", nullable = false, length = 100)
     private String eventType;
 
-    @Column(name = "previous_state")
+    @Column(name = "PREVIOUS_STATE", length = 50)
     private String previousState;
 
-    @Column(name = "new_state")
+    @Column(name = "NEW_STATE", length = 50)
     private String newState;
 
-    @Column(name = "message")
+    @Column(name = "MESSAGE", length = 500)
     private String message;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "CREATED_AT_UTC", nullable = false)
     private LocalDateTime createdAt;
 
     protected AuditLog() {
@@ -38,7 +40,7 @@ public class AuditLog {
         this.previousState = previousState;
         this.newState = newState;
         this.message = message;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public Long getId() {

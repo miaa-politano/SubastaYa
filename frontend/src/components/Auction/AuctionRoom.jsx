@@ -1,13 +1,13 @@
 /* cSpell:disable */
 import { useState, useEffect } from 'react';
-import { useToast } from '../context/ToastContext';
-import { useAuctionSocket } from '../hooks/useAuctionSocket';
-import { LoadingSpinner } from './common/LoadingSpinner';
-import { AuctionTimer } from './auction/AuctionTimer';
-import { AuctionPriceDisplay } from './auction/AuctionPriceDisplay';
-import { AuctionBidsFeed } from './auction/AuctionBidsFeed';
-import { AuctionUxTestingPanel } from './auction/AuctionUxTestingPanel';
-import { BiddingConsole } from './Bidding/BiddingConsole';
+import { useToast } from '../../Context/ToastContext.jsx';
+import { useAuctionSocket } from '../../Hooks/useAuctionSocket.js';
+import { LoadingSpinner } from '../Common/LoadingSpinner.jsx';
+import { AuctionTimer } from './AuctionTimer.jsx';
+import { AuctionPriceDisplay } from './AuctionPriceDisplay.jsx';
+import { AuctionBidsFeed } from './AuctionBidsFeed.jsx';
+import { AuctionUxTestingPanel } from './AuctionUxTestingPanel.jsx';
+import { BiddingConsole } from '../Bidding/BiddingConsole.jsx';
 
 export const AuctionRoom = ({
                                 auctionId = 1,
