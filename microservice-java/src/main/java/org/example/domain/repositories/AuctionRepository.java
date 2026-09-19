@@ -16,7 +16,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Repository
 public interface AuctionRepository extends JpaRepository<Auction, Integer> {
@@ -33,5 +32,6 @@ public interface AuctionRepository extends JpaRepository<Auction, Integer> {
             @Param("maxPrice") BigDecimal maxPrice,
             Pageable pageable
     );
-    List<Auction> findByEndDateUtcBeforeAndStatus(LocalDateTime dateTime, String status, Pageable pageable);
+
+    Page<Auction> findByEndDateUtcBeforeAndStatus(LocalDateTime dateTime, String status, Pageable pageable);
 }

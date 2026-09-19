@@ -1,3 +1,9 @@
+/**
+ * @author MIA
+ * @project SubastaYa - Financial Microservice
+ * @sprint Sprint 3
+ * @date 2026-09-18 21:11
+ */
 package org.example.service.impl;
 
 import org.example.api.contracts.CreateAuctionRequest;
@@ -14,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Service
@@ -62,20 +69,15 @@ public class AuctionServiceImpl implements AuctionService {
             throw new IllegalArgumentException("Starting price and minimum increment must be greater than zero.");
         }
 
-        Auction auction = new Auction();
-        auction.setSellerId(request.sellerId());
-        auction.setTitle(request.title());
-        auction.setDescription(request.description());
-        auction.setStartingPrice(request.startingPrice());
-        auction.setCurrentPrice(request.startingPrice());
-        auction.setMinIncrement(request.minIncrement());
-        auction.setStartDateUtc(request.startDateUtc());
-        auction.setEndDateUtc(request.endDateUtc());
-        auction.setStatus("PROXIMAS");
+        LocalDateTime nowUtc = LocalDateTime.now(Clock.systemUTC());
+        String initialStatus = nowUtc.isAfter(request.startDateUtc()) || nowUtc.isEqual(request.startDateUtc())
+                ? "ACTIVAS"
+                : "PROXIMAS";
 
+        Auction auction = mapToAuction(request, initialStatus);
         Auction savedAuction = auctionRepository.save(auction);
 
-        auditService.logStateChange(savedAuction.getId(), "", "PROXIMAS", "Auction created and initialized as PROXIMAS");
+        auditService.logStateChange(savedAuction.getId(), "", initialStatus, "Auction created and dynamically initialized");
 
         return savedAuction;
     }
@@ -83,7 +85,7 @@ public class AuctionServiceImpl implements AuctionService {
     @Override
     @Transactional
     public void liquidateExpiredAuction(Auction auction) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nowUtc = LocalDateTime.now(Clock.systemUTC());
 
         if (auction.getCurrentWinnerId() != null) {
             Wallet buyerWallet = walletRepository.findByUserId(auction.getCurrentWinnerId())
@@ -105,7 +107,7 @@ public class AuctionServiceImpl implements AuctionService {
             buyerLog.setType("DEBIT");
             buyerLog.setAmount(auction.getCurrentPrice());
             buyerLog.setDescription("Debit for winning auction ID: " + auction.getId());
-            buyerLog.setCreatedAtUtc(now);
+            buyerLog.setCreatedAtUtc(nowUtc);
             transactionLedgerRepository.save(buyerLog);
 
             TransactionLedger sellerLog = new TransactionLedger();
@@ -113,16 +115,30 @@ public class AuctionServiceImpl implements AuctionService {
             sellerLog.setType("CREDIT");
             sellerLog.setAmount(auction.getCurrentPrice());
             sellerLog.setDescription("Credit for successful sale on auction ID: " + auction.getId());
-            sellerLog.setCreatedAtUtc(now);
+            sellerLog.setCreatedAtUtc(nowUtc);
             transactionLedgerRepository.save(sellerLog);
 
-            auction.setStatus("FINALIZED");
-            auditService.logStateChange(auction.getId(), "ACTIVE", "FINALIZED", "Auction processed by worker and closed with winner");
+            auction.setStatus("FINALIZADAS");
+            auditService.logStateChange(auction.getId(), "ACTIVAS", "FINALIZADAS", "Auction processed by worker and closed with winner");
         } else {
-            auction.setStatus("DESERTED");
-            auditService.logStateChange(auction.getId(), "ACTIVE", "DESERTED", "Auction processed by worker and closed with no bids");
+            auction.setStatus("DESIERTAS");
+            auditService.logStateChange(auction.getId(), "ACTIVAS", "DESIERTAS", "Auction processed by worker and closed with no bids");
         }
 
         auctionRepository.save(auction);
+    }
+
+    private Auction mapToAuction(CreateAuctionRequest request, String status) {
+        Auction auction = new Auction();
+        auction.setSellerId(request.sellerId());
+        auction.setTitle(request.title());
+        auction.setDescription(request.description());
+        auction.setStartingPrice(request.startingPrice());
+        auction.setCurrentPrice(request.startingPrice());
+        auction.setMinIncrement(request.minIncrement());
+        auction.setStartDateUtc(request.startDateUtc());
+        auction.setEndDateUtc(request.endDateUtc());
+        auction.setStatus(status);
+        return auction;
     }
 }
