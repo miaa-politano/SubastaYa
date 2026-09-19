@@ -31,7 +31,7 @@ public class AuditServiceImpl implements AuditService {
     }
 
     @Override
-    @Transactional
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void logConcurrencyFailure(Integer auctionId, String userBidding, String message) {
         AuditLog log = new AuditLog();
         log.setAuctionId(auctionId);

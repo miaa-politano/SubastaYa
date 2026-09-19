@@ -1,10 +1,3 @@
-/**
- * @author MIA
- * @project SubastaYa - Financial Microservice
- * @sprint Sprint 2
- * @date 2026-09-11 20:50
- * @description Repository interface exposing paginated and filtered queries for AUCTION table.
- */
 package org.example.domain.repositories;
 
 import org.example.domain.entities.Auction;
@@ -21,7 +14,7 @@ import java.time.LocalDateTime;
 public interface AuctionRepository extends JpaRepository<Auction, Integer> {
 
     @Query("SELECT a FROM Auction a WHERE " +
-            "(:categoryId IS NULL OR a.category.id = :categoryId) AND " +
+            "(:categoryId IS NULL OR a.categoryId = :categoryId) AND " +
             "(:status IS NULL OR a.status = :status) AND " +
             "(:minPrice IS NULL OR a.currentPrice >= :minPrice) AND " +
             "(:maxPrice IS NULL OR a.currentPrice <= :maxPrice)")
