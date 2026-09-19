@@ -3,6 +3,7 @@
 ## Tech Stack
 * **Frontend:** React, Tailwind CSS, Vite
 * **Backend:** C# .NET 9, SignalR (WebSockets), Entity Framework Core
+* **Microservices:** Java, Spring Boot
 * **Database & Infra:** PostgreSQL, Docker Compose
 
 ## Getting Started
@@ -12,6 +13,7 @@ Ensure you have the following installed on your machine:
 * [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 * [.NET 9 SDK](https://dotnet.microsoft.com/)
 * [Node.js (LTS)](https://nodejs.org/)
+* [Java Development Kit (JDK)](https://www.oracle.com/java/technologies/downloads/)
 
 ### 2. Database Setup (Docker & EF Core)
 The project uses a containerized PostgreSQL database. Run the container in the background:
@@ -35,6 +37,9 @@ dotnet run
 ```
 
 The API will be available at http://localhost:5000 (or the port specified in your launchSettings.json). Swagger UI documentation is available at /swagger.
+
+Java Microservices:
+Open in IntelliJ IDEA or run via Maven/Gradle.
 
 Frontend (React UI):
 ```bash
