@@ -10,8 +10,8 @@ export default function Wallet() {
 
     const fetchWalletBalance = useCallback(async () => {
         try {
-            const response = await fetch(`http://localhost:8080/api/wallets?userId=${userId}`);
-            if (!response.ok) throw new Error('No se pudo obtener el saldo del servidor.');
+            const response = await fetch(`http://localhost:8080/api/wallet/balance?userId=${userId}`);
+            if (!response.ok) return;
 
             const data = await response.json();
             setBalance({
@@ -29,17 +29,13 @@ export default function Wallet() {
     useEffect(() => {
         let isMounted = true;
 
-        const executeFetch = async () => {
-            try {
+        const startSync = async () => {
+            if (isMounted) {
                 await fetchWalletBalance();
-            } catch (error) {
-                console.error("Error en la sincronización inicial: ", error);
             }
         };
 
-        if (isMounted) {
-            executeFetch();
-        }
+        startSync().catch(console.error);
 
         return () => {
             isMounted = false;
@@ -54,7 +50,7 @@ export default function Wallet() {
         setErrorMessage('');
 
         try {
-            const response = await fetch('http://localhost:8080/api/wallets/transactions', {
+            const response = await fetch('http://localhost:8080/api/wallet/deposit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -65,13 +61,15 @@ export default function Wallet() {
 
             if (!response.ok) {
                 const textError = await response.text();
-                throw new Error(textError || 'Error al procesar el depósito.');
+                setErrorMessage(textError || 'Error al procesar el depósito.');
+                setIsLoading(false);
+                return;
             }
 
             setDepositAmount('');
             await fetchWalletBalance();
         } catch (error) {
-            setErrorMessage(error.message);
+            setErrorMessage('Error al procesar el depósito.');
             console.error(error);
         } finally {
             setIsLoading(false);
@@ -91,15 +89,15 @@ export default function Wallet() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Saldo Disponible</p>
-                    <h3 className="text-2xl font-bold text-cyan-400 mt-1">\${balance.available.toLocaleString()}</h3>
+                    <h3 className="text-2xl font-bold text-cyan-400 mt-1">${balance.available.toLocaleString('es-AR')}</h3>
                 </div>
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Saldo en Garantía (Escrow)</p>
-                    <h3 className="text-2xl font-bold text-amber-500 mt-1">\${balance.escrow.toLocaleString()}</h3>
+                    <h3 className="text-2xl font-bold text-amber-500 mt-1">${balance.escrow.toLocaleString('es-AR')}</h3>
                 </div>
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total de Fondos</p>
-                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">\${balance.total.toLocaleString()}</h3>
+                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">${balance.total.toLocaleString('es-AR')}</h3>
                 </div>
             </div>
 
@@ -111,7 +109,7 @@ export default function Wallet() {
                     onChange={(e) => setDepositAmount(e.target.value)}
                     placeholder="Ingresa el monto a depositar"
                     disabled={isLoading}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 placeholder-slate-500 disabled:opacity-50"
+                    className="flex-1 bg-slate-950 rounded-lg px-4 py-2 border border-slate-800 focus:outline-hidden focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
                 />
                 <button
                     type="submit"
