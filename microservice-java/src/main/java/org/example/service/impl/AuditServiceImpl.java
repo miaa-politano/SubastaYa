@@ -18,24 +18,28 @@ public class AuditServiceImpl implements AuditService {
     @Override
     @Transactional
     public void logStateChange(Integer auctionId, String previousState, String newState, String message) {
-        auditLogRepository.save(new AuditLog(auctionId, "STATE_CHANGE", previousState, newState, message));
+        AuditLog log = new AuditLog(auctionId, "STATE_CHANGE", previousState, newState, message);
+        auditLogRepository.save(log);
     }
 
     @Override
     @Transactional
-    public void logConcurrencyFailure(Long auctionId, String message) {
-        auditLogRepository.save(new AuditLog(auctionId, "CONCURRENCY_FAILURE", null, null, message));
+    public void logConcurrencyFailure(Integer auctionId, String userBidding, String message) {
+        AuditLog log = new AuditLog(auctionId, "CONCURRENCY_FAILURE", "", "", "User: " + userBidding + " - " + message);
+        auditLogRepository.save(log);
     }
 
     @Override
     @Transactional
-    public void logTimeExtension(Long auctionId, int extendedMinutes, String message) {
-        auditLogRepository.save(new AuditLog(auctionId, "ANTI_SNIPING_EXTENSION", null, String.valueOf(extendedMinutes), message));
+    public void logTimeExtension(Integer auctionId, int extendedMinutes, String message) {
+        AuditLog log = new AuditLog(auctionId, "TIME_EXTENSION", "", "", "Extended by " + extendedMinutes + "m - " + message);
+        auditLogRepository.save(log);
     }
 
     @Override
     @Transactional
-    public void logRejectedBid(Long auctionId, String reason, String message) {
-        auditLogRepository.save(new AuditLog(auctionId, "REJECTED_BID", reason, null, message));
+    public void logRejectedBid(Integer auctionId, String userBidding, String message) {
+        AuditLog log = new AuditLog(auctionId, "REJECTED_BID", "", "", "User: " + userBidding + " - " + message);
+        auditLogRepository.save(log);
     }
 }
