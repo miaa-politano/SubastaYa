@@ -9,6 +9,7 @@ import org.example.domain.repositories.TransactionLedgerRepository;
 import org.example.service.WalletService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Service
@@ -38,7 +39,11 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional
     public void depositFunds(DepositFundsRequest request) {
-        Integer mappedUserId = (request.userId() != null) ? request.userId().intValue() : null;
+        if (request.userId() == null) {
+            throw new IllegalArgumentException("User ID parameter cannot be null.");
+        }
+
+        Integer mappedUserId = request.userId().intValue();
 
         Wallet wallet = walletRepository.findByUserId(mappedUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user ID: " + mappedUserId));
@@ -52,7 +57,7 @@ public class WalletServiceImpl implements WalletService {
         ledger.setType("DEPOSIT");
         ledger.setAmount(request.amount());
         ledger.setDescription("User financial fund deposit injection");
-        ledger.setCreatedAtUtc(LocalDateTime.now());
+        ledger.setCreatedAtUtc(LocalDateTime.now(Clock.systemUTC()));
         transactionLedgerRepository.save(ledger);
     }
 }

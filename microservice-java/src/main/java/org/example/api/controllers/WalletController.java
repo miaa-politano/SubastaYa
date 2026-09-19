@@ -11,8 +11,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
 
 @RestController
-@RequestMapping("/api/wallets")
-@Tag(name = "Wallets", description = "Endpoints for virtual wallet financial management (Escrow)")
+@RequestMapping("/api/wallet")
+@Tag(name = "Wallets")
 public class WalletController {
 
     private final WalletService walletService;
@@ -21,7 +21,7 @@ public class WalletController {
         this.walletService = walletService;
     }
 
-    @GetMapping
+    @GetMapping("/balance")
     @Operation(summary = "Get wallet balance breakdown")
     public ResponseEntity<WalletBalanceResponse> getBalance(@RequestParam Integer userId) {
         try {
@@ -31,7 +31,7 @@ public class WalletController {
         }
     }
 
-    @PostMapping("/transactions")
+    @PostMapping("/deposit")
     @Operation(summary = "Create financial transaction")
     public ResponseEntity<?> deposit(@Valid @RequestBody DepositFundsRequest request) {
         if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
