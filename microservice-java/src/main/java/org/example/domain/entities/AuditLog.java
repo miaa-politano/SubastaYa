@@ -1,7 +1,6 @@
 package org.example.domain.entities;
 
 import jakarta.persistence.*;
-import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Entity
@@ -9,8 +8,7 @@ import java.time.LocalDateTime;
 public class AuditLog {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "audit_log_gen")
-    @SequenceGenerator(name = "audit_log_gen", sequenceName = "AUDIT_LOG_ID_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID")
     private Long id;
 
@@ -30,45 +28,28 @@ public class AuditLog {
     private String message;
 
     @Column(name = "CREATED_AT_UTC", nullable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAtUtc;
 
-    protected AuditLog() {
-    }
+    public AuditLog() {}
 
-    public AuditLog(Integer auctionId, String eventType, String previousState, String newState, String message) {
-        this.auctionId = auctionId;
-        this.eventType = eventType;
-        this.previousState = previousState;
-        this.newState = newState;
-        this.message = message;
-        this.createdAt = LocalDateTime.now(Clock.systemUTC());
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public Long getId() {
-        return id;
-    }
+    public Integer getAuctionId() { return auctionId; }
+    public void setAuctionId(Integer auctionId) { this.auctionId = auctionId; }
 
-    public Integer getAuctionId() {
-        return auctionId;
-    }
+    public String getEventType() { return eventType; }
+    public void setEventType(String eventType) { this.eventType = eventType; }
 
-    public String getEventType() {
-        return eventType;
-    }
+    public String getPreviousState() { return previousState; }
+    public void setPreviousState(String previousState) { this.previousState = previousState; }
 
-    public String getPreviousState() {
-        return previousState;
-    }
+    public String getNewState() { return newState; }
+    public void setNewState(String newState) { this.newState = newState; }
 
-    public String getNewState() {
-        return newState;
-    }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
 
-    public String getMessage() {
-        return message;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public LocalDateTime getCreatedAtUtc() { return createdAtUtc; }
+    public void setCreatedAtUtc(LocalDateTime createdAtUtc) { this.createdAtUtc = createdAtUtc; }
 }

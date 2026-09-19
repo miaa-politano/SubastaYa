@@ -1,6 +1,8 @@
 package org.example.api.controllers;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import org.example.api.contracts.CreateAuctionRequest;
 import org.example.domain.entities.Auction;
 import org.example.service.AuctionService;
@@ -59,4 +61,25 @@ public class AuctionController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/{id}/bids")
+    public ResponseEntity<?> placeBid(@PathVariable("id") Integer id, @Valid @RequestBody LocalPlaceBidRequest request) {
+        try {
+            Auction updatedAuction = auctionService.placeBid(id, request.bidderId(), request.amount());
+            return ResponseEntity.ok(updatedAuction);
+        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("HTTP 409 Conflict: Otro postor ha enviado una puja superior simultáneamente. Por favor, intente de nuevo.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    public static record LocalPlaceBidRequest(
+            @NotNull(message = "El ID del postor es obligatorio.")
+            Integer bidderId,
+            @NotNull(message = "El monto de la puja es obligatorio.")
+            @Positive(message = "El monto debe ser mayor a cero.")
+            BigDecimal amount
+    ) {}
 }

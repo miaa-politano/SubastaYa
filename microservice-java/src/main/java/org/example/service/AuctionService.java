@@ -7,10 +7,8 @@ import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 
 public interface AuctionService {
-
     Page<Auction> getCatalog(Integer categoryId, String status, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
-
     Auction createAuction(CreateAuctionRequest request);
-
+    Auction placeBid(Integer auctionId, Integer bidderId, BigDecimal amount);
     void liquidateExpiredAuction(Auction auction);
 }
