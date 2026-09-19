@@ -1,7 +1,7 @@
 ﻿/* cSpell:disable */
 import { useState } from 'react';
-import { BidItem } from './activity/BidItem';
-import { PublicationItem } from './activity/PublicationItem';
+import { BidItem } from './BidItem.jsx';
+import { PublicationItem } from './PublicationItem.jsx';
 
 export const UserActivity = ({ onSelectAuction }) => {
     const [activeTab, setActiveTab] = useState('bids');

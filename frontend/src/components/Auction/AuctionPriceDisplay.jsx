@@ -1,6 +1,4 @@
-﻿import React from 'react';
-
-export const AuctionPriceDisplay = ({ currentPrice }) => {
+﻿export const AuctionPriceDisplay = ({ currentPrice }) => {
     return (
         <div className="bg-slate-950/60 p-6 rounded-lg border border-slate-800 flex flex-col justify-center items-center text-center">
             <span className="text-slate-400 text-sm font-medium">Mayor Oferta Actual</span>

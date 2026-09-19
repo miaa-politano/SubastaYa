@@ -1,6 +1,6 @@
 /* cSpell:disable */
 import { useState } from 'react';
-import { useToast } from '../../context/ToastContext';
+import { useToast } from '../../Context/ToastContext';
 
 const MESSAGES = {
     invalidAmount: 'Por favor, ingresa un monto numérico válido mayor a 0.',

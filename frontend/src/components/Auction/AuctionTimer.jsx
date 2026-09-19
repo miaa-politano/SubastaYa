@@ -1,6 +1,4 @@
-﻿import React from 'react';
-
-export const AuctionTimer = ({ timeLeft }) => {
+﻿export const AuctionTimer = ({ timeLeft }) => {
     const formatTimer = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;

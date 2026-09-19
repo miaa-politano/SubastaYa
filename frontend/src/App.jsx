@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { AuctionRoom } from './components/AuctionRoom';
-import { UserActivity } from './components/UserActivity';
-import { ToastProvider } from './context/ToastContext';
-import Wallet from './components/Wallet.jsx';
+import { AuctionRoom } from './components/Auction/AuctionRoom.jsx';
+import { UserActivity } from './components/Activity/UserActivity.jsx';
+import { AuctionCard } from './components/Auction/AuctionCard.jsx';
+import { ToastProvider } from './Context/ToastContext';
+import Wallet from './components/Wallet/Wallet.jsx';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('catalog');
@@ -119,36 +120,11 @@ function AppContent() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {auctions.map((item) => (
-                      <div
+                      <AuctionCard
                           key={item.id}
-                          className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-cyan-500/50 transition-all flex flex-col justify-between group shadow-lg"
-                      >
-                        <div className="space-y-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                            Subasta #{item.id} - {item.status}
-                          </span>
-                          <h3 className="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">
-                            {item.title}
-                          </h3>
-                          <p className="text-xs text-slate-400 line-clamp-2">{item.description}</p>
-                        </div>
-
-                        <div className="mt-6 pt-4 border-t border-slate-800 flex justify-between items-end">
-                          <div>
-                            <span className="text-[10px] text-slate-400 block">Oferta Actual</span>
-                            <span className="text-xl font-extrabold text-emerald-400">
-                              \${Number(item.currentPrice).toLocaleString('es-AR')}
-                            </span>
-                          </div>
-
-                          <button
-                              onClick={() => handleOpenRoom(item.id)}
-                              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
-                          >
-                            Ingresar
-                          </button>
-                        </div>
-                      </div>
+                          auction={item}
+                          onOpenRoom={handleOpenRoom}
+                      />
                   ))}
                 </div>
               </div>

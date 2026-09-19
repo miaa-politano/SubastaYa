@@ -1,6 +1,4 @@
-﻿import React from 'react';
-
-export const AuctionUxTestingPanel = ({
+﻿export const AuctionUxTestingPanel = ({
                                           currentPrice,
                                           currentUserId,
                                           auctionId,
