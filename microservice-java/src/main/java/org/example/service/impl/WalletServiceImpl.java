@@ -29,12 +29,7 @@ public class WalletServiceImpl implements WalletService {
     public WalletBalanceResponse getUserBalance(Integer userId) {
         Wallet wallet = walletRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user ID: " + userId));
-
-        return new WalletBalanceResponse(
-                wallet.getTotalBalance(),
-                wallet.getLockedBalance(),
-                wallet.getAvailableBalance()
-        );
+        return new WalletBalanceResponse(wallet.getTotalBalance(), wallet.getLockedBalance(), wallet.getAvailableBalance());
     }
 
     @Override
@@ -43,7 +38,6 @@ public class WalletServiceImpl implements WalletService {
         if (request.userId() == null) {
             throw new IllegalArgumentException("User ID parameter cannot be null.");
         }
-
         Integer userId = request.userId();
         Wallet wallet = walletRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user ID: " + userId));
@@ -65,7 +59,6 @@ public class WalletServiceImpl implements WalletService {
     @Transactional
     public void settleAuctionPayment(Integer auctionId, Integer sellerId, Integer buyerId, BigDecimal amount) {
         LocalDateTime nowUtc = LocalDateTime.now(Clock.systemUTC());
-
         Wallet buyerWallet = walletRepository.findByUserId(buyerId)
                 .orElseThrow(() -> new RuntimeException("Buyer wallet not found"));
         Wallet sellerWallet = walletRepository.findByUserId(sellerId)
@@ -76,7 +69,6 @@ public class WalletServiceImpl implements WalletService {
         } else {
             buyerWallet.setLockedBalance(BigDecimal.ZERO);
         }
-
         buyerWallet.setTotalBalance(buyerWallet.getTotalBalance().subtract(amount));
         buyerWallet.setAvailableBalance(buyerWallet.getTotalBalance().subtract(buyerWallet.getLockedBalance()));
 
@@ -111,10 +103,9 @@ public class WalletServiceImpl implements WalletService {
         if (previousWinnerId != null) {
             Wallet previousWinnerWallet = walletRepository.findByUserId(previousWinnerId)
                     .orElseThrow(() -> new IllegalStateException("Previous winner wallet not found."));
-
             previousWinnerWallet.setLockedBalance(previousWinnerWallet.getLockedBalance().subtract(currentPrice));
             previousWinnerWallet.setAvailableBalance(previousWinnerWallet.getAvailableBalance().add(currentPrice));
-            walletRepository.save(previousWinnerWallet);
+            walletRepository.saveAndFlush(previousWinnerWallet);
 
             TransactionLedger refundLog = new TransactionLedger();
             refundLog.setWallet(previousWinnerWallet);
@@ -134,7 +125,7 @@ public class WalletServiceImpl implements WalletService {
 
         newBidderWallet.setAvailableBalance(newBidderWallet.getAvailableBalance().subtract(newAmount));
         newBidderWallet.setLockedBalance(newBidderWallet.getLockedBalance().add(newAmount));
-        walletRepository.save(newBidderWallet);
+        walletRepository.saveAndFlush(newBidderWallet);
 
         TransactionLedger lockLog = new TransactionLedger();
         lockLog.setWallet(newBidderWallet);

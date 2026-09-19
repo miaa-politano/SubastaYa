@@ -7,51 +7,47 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "AUCTION")
 public class Auction {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID")
     private Integer id;
 
-    @Column(name = "SELLER_ID", nullable = false)
+    @Column(name = "SELLER_ID")
     private Integer sellerId;
 
     @Column(name = "CURRENT_WINNER_ID")
     private Integer currentWinnerId;
 
-    @Column(name = "TITLE", nullable = false, length = 150)
+    @Column(name = "CATEGORY_ID")
+    private Integer categoryId;
+
+    @Column(name = "TITLE")
     private String title;
 
-    @Column(name = "DESCRIPTION", nullable = false, length = 500)
+    @Column(name = "DESCRIPTION")
     private String description;
 
-    @Column(name = "STARTING_PRICE", nullable = false, precision = 18, scale = 2)
+    @Column(name = "STARTING_PRICE")
     private BigDecimal startingPrice;
 
-    @Column(name = "CURRENT_PRICE", nullable = false, precision = 18, scale = 2)
+    @Column(name = "CURRENT_PRICE")
     private BigDecimal currentPrice;
 
-    @Column(name = "MIN_INCREMENT", nullable = false, precision = 18, scale = 2)
+    @Column(name = "MIN_INCREMENT")
     private BigDecimal minIncrement;
 
-    @Column(name = "START_DATE_UTC", nullable = false)
+    @Column(name = "START_DATE_UTC")
     private LocalDateTime startDateUtc;
 
-    @Column(name = "END_DATE_UTC", nullable = false)
+    @Column(name = "END_DATE_UTC")
     private LocalDateTime endDateUtc;
 
-    @Column(name = "STATUS", nullable = false, length = 50)
+    @Column(name = "STATUS")
     private String status;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "CATEGORY_ID", nullable = false)
-    private Category category;
-
     @Version
-    @Column(name = "VERSION", nullable = false)
+    @Column(name = "VERSION")
     private Long version;
-
-    public Auction() {}
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -59,6 +55,8 @@ public class Auction {
     public void setSellerId(Integer sellerId) { this.sellerId = sellerId; }
     public Integer getCurrentWinnerId() { return currentWinnerId; }
     public void setCurrentWinnerId(Integer currentWinnerId) { this.currentWinnerId = currentWinnerId; }
+    public Integer getCategoryId() { return categoryId; }
+    public void setCategoryId(Integer categoryId) { this.categoryId = categoryId; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
@@ -75,8 +73,6 @@ public class Auction {
     public void setEndDateUtc(LocalDateTime endDateUtc) { this.endDateUtc = endDateUtc; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
-    public Category getCategory() { return category; }
-    public void setCategory(Category category) { this.category = category; }
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
 }
