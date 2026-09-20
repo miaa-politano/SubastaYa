@@ -90,15 +90,15 @@ export default function Wallet() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Saldo Disponible</p>
-                    <h3 className="text-2xl font-bold text-cyan-400 mt-1">\${balance.available.toLocaleString('es-AR')}</h3>
+                    <h3 className="text-2xl font-bold text-cyan-400 mt-1">${balance.available.toLocaleString('es-AR')}</h3>
                 </div>
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Saldo en Garantía (Escrow)</p>
-                    <h3 className="text-2xl font-bold text-amber-500 mt-1">\${balance.escrow.toLocaleString('es-AR')}</h3>
+                    <h3 className="text-2xl font-bold text-amber-500 mt-1">${balance.escrow.toLocaleString('es-AR')}</h3>
                 </div>
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total de Fondos</p>
-                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">\${balance.total.toLocaleString('es-AR')}</h3>
+                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">${balance.total.toLocaleString('es-AR')}</h3>
                 </div>
             </div>
 
