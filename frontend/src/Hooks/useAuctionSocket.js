@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createAuctionHubConnection } from '../Services/AuctionHub.js';
 import { useToast } from '../Context/ToastContext';
+import { placeBidRequest } from '../Services/auctionService.js';
 
 export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiSnipingExtend) => {
     const { addToast } = useToast();
@@ -23,7 +24,7 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
         if (Number(auctionIdReceived) !== Number(auctionId)) return;
 
         setCurrentPrice(amount);
-        const isCurrentBidMine = bidderId ? bidderId === currentUserId : bidderUsername === currentUserId;
+        const isCurrentBidMine = bidderId ? Number(bidderId) === Number(currentUserId) : bidderUsername === currentUserId;
 
         setLeadershipStatus((prevStatus) => {
             if (isCurrentBidMine) {
@@ -62,13 +63,23 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
 
     const handleBidSubmit = async (amount) => {
         setIsSimulatingNetwork(true);
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                setIsSimulatingNetwork(false);
-                handleIncomingBid(auctionId, amount, currentUserId, new Date().toISOString(), currentUserId);
-                resolve();
-            }, 1000);
-        });
+        try {
+            const result = await placeBidRequest(auctionId, currentUserId, amount);
+
+            if (result.success) {
+                // El socket se encargará de actualizar el precio y el historial vía handleIncomingBid
+            } else if (result.status === 409) {
+                addToast(result.error || 'Conflicto de concurrencia: tu oferta fue superada en el mismo instante.', 'error');
+            } else if (result.status === 400 || result.status === 422) {
+                addToast(result.error || 'Saldo insuficiente para cubrir la garantía de la puja.', 'error');
+            } else {
+                addToast(result.error || `Error inesperado del servidor (HTTP ${result.status}).`, 'error');
+            }
+        } catch (error) {
+            addToast('Error de comunicación con el servicio de subastas.', 'error');
+        } finally {
+            setIsSimulatingNetwork(false);
+        }
     };
 
     useEffect(() => {
