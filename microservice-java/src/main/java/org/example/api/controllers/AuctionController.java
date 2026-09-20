@@ -4,11 +4,9 @@ import jakarta.validation.Valid;
 import org.example.api.contracts.CreateAuctionRequest;
 import org.example.domain.entities.Auction;
 import org.example.service.AuctionService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +18,6 @@ public class AuctionController {
 
     private final AuctionService auctionService;
 
-    @Autowired
     public AuctionController(AuctionService auctionService) {
         this.auctionService = auctionService;
     }
@@ -32,31 +29,32 @@ public class AuctionController {
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id,asc") String[] sort) {
-
-        String sortField = sort[0];
-        Sort.Direction direction = sort.length > 1 && sort[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
-        Page<Auction> auctionsPage = auctionService.getCatalog(categoryId, status, minPrice, maxPrice, pageable);
-
-        return ResponseEntity.ok(auctionsPage);
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(auctionService.getCatalog(categoryId, status, minPrice, maxPrice, pageable));
     }
 
     @PostMapping
     public ResponseEntity<?> createAuction(@Valid @RequestBody CreateAuctionRequest request) {
-        if (request.endDateUtc().isBefore(request.startDateUtc()) || request.endDateUtc().isEqual(request.startDateUtc())) {
-            return ResponseEntity.badRequest().body("La fecha de finalización debe ser posterior a la fecha de inicio.");
-        }
-
         try {
-            Auction savedAuction = auctionService.createAuction(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(savedAuction);
+            return ResponseEntity.status(HttpStatus.CREATED).body(auctionService.createAuction(request));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/{id}/bids")
+    public ResponseEntity<?> placeBid(@PathVariable("id") Integer id, @Valid @RequestBody LocalPlaceBidRequest request) {
+        try {
+            return ResponseEntity.ok(auctionService.placeBid(id, request.bidderId(), request.amount()));
+        } catch (org.springframework.dao.ConcurrencyFailureException |
+                 org.springframework.transaction.TransactionSystemException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("HTTP 409 Conflict: Otro postor ha enviado una puja superior simultáneamente.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    public record LocalPlaceBidRequest(Integer bidderId, BigDecimal amount) {}
 }
