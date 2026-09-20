@@ -1,6 +1,4 @@
-﻿import React from 'react';
-
-export const PublicationItem = ({ item }) => {
+﻿export const PublicationItem = ({ item }) => {
     return (
         <div className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 transition-colors p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md">
             <div className="space-y-1">

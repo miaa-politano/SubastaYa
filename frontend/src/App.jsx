@@ -17,14 +17,14 @@ function AppContent() {
   };
 
   useEffect(() => {
-    fetch(`http://localhost:8080/api/wallet/balance?userId=${currentUser.id}`)
+    fetch(`/api/wallet/balance?userId=${currentUser.id}`)
         .then((res) => res.json())
         .then((data) => setUserBalance(data.availableBalance || 0))
         .catch((err) => console.error("Error fetching balance:", err));
   }, [currentView, currentUser.id]);
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/auctions?page=0&size=10')
+    fetch('/api/auctions?page=0&size=10')
         .then((res) => res.json())
         .then((data) => setAuctions(data.content || []))
         .catch((err) => console.error("Error fetching catalog:", err));
