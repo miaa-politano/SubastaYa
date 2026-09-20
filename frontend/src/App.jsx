@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AuctionRoom } from './components/Auction/AuctionRoom.jsx';
 import { UserActivity } from './components/Activity/UserActivity.jsx';
 import { AuctionCard } from './components/Auction/AuctionCard.jsx';
@@ -7,30 +7,40 @@ import Wallet from './components/Wallet/Wallet.jsx';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('catalog');
+  const [previousView, setPreviousView] = useState('catalog');
   const [selectedAuctionId, setSelectedAuctionId] = useState(1);
   const [auctions, setAuctions] = useState([]);
   const [userBalance, setUserBalance] = useState(0);
+  const [userEscrow, setUserEscrow] = useState(0);
 
   const currentUser = {
     id: 2,
     name: 'Comprador_General'
   };
 
-  useEffect(() => {
+  const triggerBalanceRefresh = useCallback(() => {
     fetch(`/api/wallet/balance?userId=${currentUser.id}`)
         .then((res) => res.json())
-        .then((data) => setUserBalance(data.availableBalance || 0))
-        .catch((err) => console.error("Error fetching balance:", err));
-  }, [currentView, currentUser.id]);
+        .then((data) => {
+          setUserBalance(data.availableBalance || 0);
+          setUserEscrow(data.lockedBalance || 0);
+        })
+        .catch((err) => console.error("Error fetching financial metrics:", err));
+  }, [currentUser.id]);
 
   useEffect(() => {
-    fetch('/api/auctions?page=0&size=10')
+    triggerBalanceRefresh();
+  }, [currentView, currentUser.id, triggerBalanceRefresh]);
+
+  useEffect(() => {
+    fetch(`/api/auctions?page=0&size=10&_t=${Date.now()}`)
         .then((res) => res.json())
         .then((data) => setAuctions(data.content || []))
         .catch((err) => console.error("Error fetching catalog:", err));
   }, [currentView]);
 
   const handleOpenRoom = (auctionId) => {
+    setPreviousView(currentView);
     setSelectedAuctionId(auctionId);
     setCurrentView('room');
   };
@@ -74,12 +84,16 @@ function AppContent() {
               </nav>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <div className="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 text-xs">
                 <span className="text-slate-400">Disponible:</span>
                 <strong className="text-emerald-400">${userBalance.toLocaleString('es-AR')}</strong>
               </div>
-              <span className="text-xs text-slate-400">
+              <div className="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 text-xs">
+                <span className="text-slate-400">Retenido:</span>
+                <strong className="text-amber-500">${userEscrow.toLocaleString('es-AR')}</strong>
+              </div>
+              <span className="text-xs text-slate-400 ml-2">
                 Usuario: <strong className="text-slate-200">{currentUser.name}</strong>
               </span>
             </div>
@@ -90,21 +104,29 @@ function AppContent() {
           {currentView === 'room' && (
               <div className="space-y-4">
                 <button
-                    onClick={() => setCurrentView('catalog')}
+                    onClick={() => setCurrentView(previousView)}
                     className="px-4 py-2 text-xs font-semibold bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-lg transition-colors inline-flex items-center gap-2"
                 >
-                  ← Volver al catálogo
+                  ← Volver atrás
                 </button>
-                <AuctionRoom
-                    auctionId={selectedAuctionId}
-                    currentUserId={currentUser.id}
-                    walletBalance={userBalance}
-                />
+                {(() => {
+                  const currentAuction = auctions.find(a => a.id === selectedAuctionId);
+                  const priceToPass = currentAuction ? (currentAuction.currentPrice || currentAuction.initialPrice) : 100000;
+                  return (
+                      <AuctionRoom
+                          auctionId={selectedAuctionId}
+                          initialPrice={priceToPass}
+                          currentUserId={currentUser.id}
+                          walletBalance={userBalance}
+                          onRefreshBalance={triggerBalanceRefresh}
+                      />
+                  );
+                })()}
               </div>
           )}
 
           {currentView === 'activity' && (
-              <UserActivity onSelectAuction={handleOpenRoom} />
+              <UserActivity onSelectAuction={handleOpenRoom} currentEscrow={userEscrow} />
           )}
 
           {currentView === 'wallet' && (
@@ -119,13 +141,15 @@ function AppContent() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {auctions.map((item) => (
-                      <AuctionCard
-                          key={item.id}
-                          auction={item}
-                          onOpenRoom={handleOpenRoom}
-                      />
-                  ))}
+                  {auctions
+                      .filter((item) => item.status === 'ACTIVA' || item.status === 'ACTIVE' || item.status === 'ACTIVAS')
+                      .map((item) => (
+                          <AuctionCard
+                              key={item.id}
+                              auction={item}
+                              onOpenRoom={handleOpenRoom}
+                          />
+                      ))}
                 </div>
               </div>
           )}

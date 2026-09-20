@@ -16,8 +16,8 @@ const MESSAGES = {
 
 export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
     const { addToast } = useToast();
-    const currentPrice = auction?.currentPrice || 0;
-    const minIncrement = auction?.minIncrement || 0;
+    const currentPrice = Number(auction?.currentPrice || 0);
+    const minIncrement = Number(auction?.minIncrement || 0);
     const isClosed = auction?.isClosed || false;
 
     const suggestedBid = currentPrice + minIncrement;
