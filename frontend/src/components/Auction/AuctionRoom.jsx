@@ -1,12 +1,10 @@
 /* cSpell:disable */
 import { useState, useEffect } from 'react';
-import { useToast } from '../../Context/ToastContext.jsx';
 import { useAuctionSocket } from '../../Hooks/useAuctionSocket.js';
 import { LoadingSpinner } from '../Common/LoadingSpinner.jsx';
 import { AuctionTimer } from './AuctionTimer.jsx';
 import { AuctionPriceDisplay } from './AuctionPriceDisplay.jsx';
 import { AuctionBidsFeed } from './AuctionBidsFeed.jsx';
-import { AuctionUxTestingPanel } from './AuctionUxTestingPanel.jsx';
 import { BiddingConsole } from '../Bidding/BiddingConsole.jsx';
 
 export const AuctionRoom = ({
@@ -15,7 +13,6 @@ export const AuctionRoom = ({
                                 currentUserId,
                                 walletBalance
                             }) => {
-    const { addToast } = useToast();
     const [timeLeft, setTimeLeft] = useState(75);
 
     useEffect(() => {
@@ -32,20 +29,10 @@ export const AuctionRoom = ({
         leadershipStatus,
         bidsHistory,
         isSimulatingNetwork,
-        handleIncomingBid,
-        handleTimeExtended,
         handleBidSubmit
     } = useAuctionSocket(auctionId, initialPrice, currentUserId, () => {
         setTimeLeft((prev) => prev + 120);
     });
-
-    const simulateNetworkRequest = (type) => {
-        if (type === '409') {
-            addToast('HTTP 409 Conflict: Oferta concurrente rechazada por bloqueo optimista.', 'error');
-        } else if (type === '422') {
-            addToast('HTTP 422 Unprocessable Entity: Saldo disponible insuficiente para cubrir la garantía.', 'error');
-        }
-    };
 
     const isClosed = timeLeft <= 0;
     const auctionData = {
@@ -126,15 +113,6 @@ export const AuctionRoom = ({
                     </div>
                     <AuctionBidsFeed bidsHistory={bidsHistory} currentUserId={currentUserId} />
                 </div>
-
-                <AuctionUxTestingPanel
-                    currentPrice={currentPrice}
-                    currentUserId={currentUserId}
-                    auctionId={auctionId}
-                    onIncomingBid={handleIncomingBid}
-                    onExtend={() => handleTimeExtended(auctionId, null, 'Puja en zona crítica')}
-                    onSimulateError={simulateNetworkRequest}
-                />
             </div>
         </div>
     );
