@@ -62,13 +62,34 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
 
     const handleBidSubmit = async (amount) => {
         setIsSimulatingNetwork(true);
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                setIsSimulatingNetwork(false);
-                handleIncomingBid(auctionId, amount, currentUserId, new Date().toISOString(), currentUserId);
-                resolve();
-            }, 1000);
-        });
+        try {
+            const response = await fetch(`/api/auctions/${auctionId}/bids`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    bidderId: Number(currentUserId),
+                    amount: Number(amount)
+                })
+            });
+
+            if (response.ok) {
+                handleIncomingBid(auctionId, amount, 'TÚ', new Date().toISOString(), currentUserId);
+                addToast(`¡Puja enviada con éxito por $${Number(amount).toLocaleString()}!`, 'success');
+            } else if (response.status === 409) {
+                addToast('HTTP 409 Conflict: Oferta rechazada por concurrencia (bloqueo optimista).', 'error');
+            } else if (response.status === 400 || response.status === 422) {
+                addToast('Error de validación: Saldo insuficiente o monto menor al incremento.', 'warning');
+            } else {
+                addToast('Error al procesar la oferta en el servidor.', 'error');
+            }
+        } catch (error) {
+            console.error("Fallo de red en la puja:", error);
+            addToast('Error de red. No se pudo conectar con el microservicio de Java.', 'error');
+        } finally {
+            setIsSimulatingNetwork(false);
+        }
     };
 
     useEffect(() => {

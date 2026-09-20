@@ -1,6 +1,4 @@
-﻿import React from 'react';
-
-export const AuctionBidsFeed = ({ bidsHistory, currentUserId }) => {
+﻿export const AuctionBidsFeed = ({ bidsHistory, currentUserId }) => {
     return (
         <div className="bg-slate-950/60 p-5 rounded-lg border border-slate-800 flex flex-col">
             <div className="flex justify-between items-center mb-3">

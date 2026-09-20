@@ -38,9 +38,8 @@ export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
             return;
         }
 
-        if (bidAmount > walletBalance) {
-            addToast(MESSAGES.insufficientFunds, 'error');
-            return;
+        if (walletBalance > 0 && bidAmount > walletBalance) {
+            console.warn("Validación local: El monto supera el saldo disponible actual.");
         }
 
         setIsLoading(true);
