@@ -1,69 +1,63 @@
 ﻿/* cSpell:disable */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BidItem } from './BidItem.jsx';
 import { PublicationItem } from './PublicationItem.jsx';
 
-export const UserActivity = ({ onSelectAuction }) => {
+export const UserActivity = ({ onSelectAuction, currentEscrow }) => {
     const [activeTab, setActiveTab] = useState('bids');
+    const [myBids, setMyBids] = useState([]);
+    const [myPublications, setMyPublications] = useState([]);
 
-    const myBids = [
-        {
-            id: 1,
-            auctionId: 1,
-            title: 'Notebook Gamer RTX 4060',
-            myBidAmount: 1450000,
-            currentHighestBid: 1450000,
-            status: 'winning',
-            escrowLocked: true,
-            endDate: 'Hoy, 20:00 hs'
-        },
-        {
-            id: 2,
-            auctionId: 2,
-            title: 'Monitor 27" 165Hz IPS',
-            myBidAmount: 320000,
-            currentHighestBid: 350000,
-            status: 'outbid',
-            escrowLocked: false,
-            endDate: 'Mañana, 18:30 hs'
-        },
-        {
-            id: 3,
-            auctionId: 3,
-            title: 'Teclado Mecánico Wireless',
-            myBidAmount: 85000,
-            currentHighestBid: 85000,
-            status: 'won',
-            escrowLocked: false,
-            endDate: 'Finalizada el 15/09'
-        }
-    ];
+    const currentUserId = 2;
 
-    const myPublications = [
-        {
-            id: 101,
-            title: 'PlayStation 5 Slim 1TB',
-            initialPrice: 800000,
-            currentHighestBid: 920000,
-            totalBids: 8,
-            status: 'completed',
-            endDate: 'Finalizada'
-        },
-        {
-            id: 102,
-            title: 'Auriculares Sony WH-1000XM5',
-            initialPrice: 250000,
-            currentHighestBid: 310000,
-            totalBids: 14,
-            status: 'completed',
-            winnerUsername: 'Comprador_Gamer',
-            endDate: 'Cerrada ayer'
-        }
-    ];
+    useEffect(() => {
+        fetch(`/api/auctions/bids/user/${currentUserId}`)
+            .then((res) => res.json())
+            .then((data) => {
+                const mappedBids = (data || []).map((bid, index) => ({
+                    id: bid['id'] || index,
+                    auctionId: bid['auctionId'],
+                    title: bid['auctionTitle'] || `Subasta #${bid['auctionId']}`,
+                    myBidAmount: bid['amount'],
+                    currentHighestBid: bid['currentAuctionPrice'] || bid['amount'],
+                    status: bid['isHighest'] ? 'winning' : 'outbid',
+                    escrowLocked: bid['isHighest'],
+                    endDate: 'Activa'
+                }));
+                setMyBids(mappedBids);
+            })
+            .catch((err) => {
+                console.error("Error al conectar con el historial de Java:", err);
+                setMyBids([
+                    {
+                        id: 1,
+                        auctionId: 1,
+                        title: 'Notebook Gamer Lenovo Legion',
+                        myBidAmount: 60000,
+                        currentHighestBid: 120000,
+                        status: 'outbid',
+                        escrowLocked: false,
+                        endDate: 'Activa'
+                    }
+                ]);
+            });
 
-    const totalEscrowLocked = myBids
-        .filter((b) => b.escrowLocked)
-        .reduce((acc, curr) => acc + curr.myBidAmount, 0);
+        fetch(`/api/auctions/seller/${currentUserId}`)
+            .then((res) => res.json())
+            .then((data) => {
+                const mappedPubs = (data || []).map((pub, index) => ({
+                    id: pub['id'] || index,
+                    title: pub['title'],
+                    initialPrice: pub['startingPrice'] || pub['initialPrice'] || 0,
+                    currentHighestBid: pub['currentPrice'] || 0,
+                    totalBids: pub['version'] || 0,
+                    status: pub['status'] === 'ACTIVE' ? 'active' : 'completed',
+                    endDate: pub['status'] === 'ACTIVE' ? 'En progreso' : 'Finalizada'
+                }));
+                setMyPublications(mappedPubs);
+            })
+            .catch((err) => console.error("Error al buscar publicaciones:", err));
+    }, [activeTab]);
 
     return (
         <div className="max-w-5xl mx-auto space-y-6">
@@ -74,12 +68,12 @@ export const UserActivity = ({ onSelectAuction }) => {
                 </div>
 
                 <div className="bg-slate-950 px-4 py-2.5 rounded-lg border border-slate-800 flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-amber-400">
-            Total en Garantía (Escrow):
-          </span>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-400">
+                        Total en Garantía (Escrow):
+                    </span>
                     <span className="text-lg font-extrabold text-amber-400">
-            ${totalEscrowLocked.toLocaleString()}
-          </span>
+                        ${(currentEscrow || 0).toLocaleString('es-AR')}
+                    </span>
                 </div>
             </div>
 
@@ -109,17 +103,25 @@ export const UserActivity = ({ onSelectAuction }) => {
 
             {activeTab === 'bids' && (
                 <div className="space-y-3">
-                    {myBids.map((bid) => (
-                        <BidItem key={bid.id} bid={bid} onSelectAuction={onSelectAuction} />
-                    ))}
+                    {myBids.length === 0 ? (
+                        <p className="text-sm text-slate-500 text-center py-4">No registras ninguna puja en este sprint.</p>
+                    ) : (
+                        myBids.map((bid) => (
+                            <BidItem key={bid.id} bid={bid} onSelectAuction={onSelectAuction} />
+                        ))
+                    )}
                 </div>
             )}
 
             {activeTab === 'publications' && (
                 <div className="space-y-3">
-                    {myPublications.map((item) => (
-                        <PublicationItem key={item.id} item={item} />
-                    ))}
+                    {myPublications.length === 0 ? (
+                        <p className="text-sm text-slate-500 text-center py-4">No registras publicaciones de venta.</p>
+                    ) : (
+                        myPublications.map((item) => (
+                            <PublicationItem key={item.id} item={item} />
+                        ))
+                    )}
                 </div>
             )}
         </div>

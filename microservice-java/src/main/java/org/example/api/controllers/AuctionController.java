@@ -24,12 +24,12 @@ public class AuctionController {
 
     @GetMapping
     public ResponseEntity<Page<Auction>> getAuctionsCatalog(
-            @RequestParam(required = false) Integer categoryId,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(value = "categoryId", required = false) Integer categoryId,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
+            @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(auctionService.getCatalog(categoryId, status, minPrice, maxPrice, pageable));
     }
