@@ -85,6 +85,12 @@ INSERT INTO "WALLET" ("ID", "USER_ID", "TOTAL_BALANCE", "LOCKED_BALANCE", "AVAIL
                                                                                                    (3, 3, 200000.00, 0.00, 200000.00),
                                                                                                    (4, 4, 500.00, 0.00, 500.00);
 
-INSERT INTO "AUCTION" ("ID", "SELLER_ID", "CATEGORY_ID", "TITLE", "DESCRIPTION", "STARTING_PRICE", "CURRENT_PRICE", "MIN_INCREMENT", "START_DATE_UTC", "END_DATE_UTC", "STATUS", "CURRENT_WINNER_ID") VALUES
-                                                                                                                                                                                                          (1, 1, 1, 'Notebook Gamer Lenovo Legion', 'Procesador Intel i7, RTX 4060. Configurado para test de concurrencia.', 100000.00, 120000.00, 5000.00, CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '30 minutes', 'ACTIVE', 2),
-                                                                                                                                                                                                          (2, 1, 1, 'Monitor 27'' 165Hz IPS', 'Panel VA, 1ms de respuesta, QHD. Validando flujos alternativos.', 50000.00, 50000.00, 2000.00, CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '45 minutes', 'ACTIVE', NULL);
+INSERT INTO "AUCTION" (
+    "ID", "SELLER_ID", "CATEGORY_ID", "TITLE", "DESCRIPTION",
+    "STARTING_PRICE", "CURRENT_PRICE", "MIN_INCREMENT",
+    "START_DATE_UTC", "END_DATE_UTC", "STATUS", "CURRENT_WINNER_ID", "VERSION"
+) VALUES
+    (1, 1, 1, 'Notebook Gamer Lenovo Legion Pro 5', 'Test Concurrencia', 100000.00, 120000.00, 5000.00, CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '30 days', 'ACTIVAS', 2, 0)
+ON CONFLICT ("ID") DO UPDATE SET
+                                 "STATUS" = 'ACTIVAS',
+                                 "END_DATE_UTC" = CURRENT_TIMESTAMP + INTERVAL '30 days';
