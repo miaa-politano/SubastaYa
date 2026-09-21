@@ -23,7 +23,7 @@ public class WalletController {
 
     @GetMapping("/balance")
     @Operation(summary = "Get wallet balance breakdown")
-    public ResponseEntity<WalletBalanceResponse> getBalance(@RequestParam Integer userId) {
+    public ResponseEntity<WalletBalanceResponse> getBalance(@RequestParam("userId") Integer userId) {
         try {
             return ResponseEntity.ok(walletService.getUserBalance(userId));
         } catch (IllegalArgumentException e) {

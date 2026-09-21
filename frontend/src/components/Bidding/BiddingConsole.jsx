@@ -16,8 +16,8 @@ const MESSAGES = {
 
 export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
     const { addToast } = useToast();
-    const currentPrice = auction?.currentPrice || 0;
-    const minIncrement = auction?.minIncrement || 0;
+    const currentPrice = Number(auction?.currentPrice || 0);
+    const minIncrement = Number(auction?.minIncrement || 0);
     const isClosed = auction?.isClosed || false;
 
     const suggestedBid = currentPrice + minIncrement;
@@ -38,7 +38,7 @@ export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
             return;
         }
 
-        if (bidAmount > walletBalance) {
+        if (walletBalance > 0 && bidAmount > Number(walletBalance)) {
             addToast(MESSAGES.insufficientFunds, 'error');
             return;
         }
@@ -75,7 +75,7 @@ export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
                 {isLoading ? (
                     <span className="animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
                 ) : (
-                    `${MESSAGES.autoBid}${suggestedBid}`
+                    `${MESSAGES.autoBid}${suggestedBid.toLocaleString('es-AR')}`
                 )}
             </button>
 
@@ -89,7 +89,7 @@ export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
                     value={customBid}
                     onChange={(e) => setCustomBid(e.target.value)}
                     disabled={isLoading}
-                    placeholder={`${MESSAGES.manualPlaceholder}${suggestedBid})`}
+                    placeholder={`${MESSAGES.manualPlaceholder}${suggestedBid.toLocaleString('es-AR')})`}
                     className="w-full pl-8 pr-24 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-gray-700 font-medium"
                 />
 

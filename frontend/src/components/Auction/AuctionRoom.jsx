@@ -13,7 +13,8 @@ export const AuctionRoom = ({
                                 auctionId = 1,
                                 initialPrice = 1450000,
                                 currentUserId,
-                                walletBalance
+                                walletBalance,
+                                onRefreshBalance
                             }) => {
     const { addToast } = useToast();
     const [timeLeft, setTimeLeft] = useState(75);
@@ -37,7 +38,7 @@ export const AuctionRoom = ({
         handleBidSubmit
     } = useAuctionSocket(auctionId, initialPrice, currentUserId, () => {
         setTimeLeft((prev) => prev + 120);
-    });
+    }, onRefreshBalance);
 
     const simulateNetworkRequest = (type) => {
         if (type === '409') {
@@ -47,10 +48,19 @@ export const AuctionRoom = ({
         }
     };
 
+    const getRoomItemTitle = () => {
+        if (auctionId === 99) return "Notebook Gamer ASUS ROG Strix";
+        if (auctionId === 100) return "Monitor Gaming 27'' Curved 165Hz";
+        if (auctionId === 1) return "Notebook Gamer Lenovo Legion";
+        if (auctionId === 2) return "Monitor 27'' 165Hz IPS";
+        return "Artículo de Tecnología";
+    };
+
     const isClosed = timeLeft <= 0;
+
     const auctionData = {
-        currentPrice,
-        minIncrement: 50000,
+        currentPrice: currentPrice,
+        minIncrement: auctionId === 2 ? 2000 : 5000, // Usa los $5.000 del seed para la Subasta #1 y $2.000 para la #2
         isClosed
     };
 
@@ -60,7 +70,10 @@ export const AuctionRoom = ({
                 <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4 mb-6">
                     <div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400">Sala en Tiempo Real</span>
-                        <h2 className="text-2xl font-bold tracking-tight">Subasta #{auctionId}</h2>
+                        <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 flex-wrap">
+                            Subasta #{auctionId}
+                            <span className="text-slate-400 font-medium text-lg">- {getRoomItemTitle()}</span>
+                        </h2>
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">

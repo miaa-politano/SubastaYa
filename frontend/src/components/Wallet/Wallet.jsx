@@ -1,3 +1,4 @@
+/* cSpell:disable */
 import { useState, useEffect, useCallback } from 'react';
 
 export default function Wallet() {
@@ -10,7 +11,7 @@ export default function Wallet() {
 
     const fetchWalletBalance = useCallback(async () => {
         try {
-            const response = await fetch(`http://localhost:8080/api/wallet/balance?userId=${userId}`);
+            const response = await fetch(`/api/wallet/balance?userId=${userId}`);
             if (!response.ok) return;
 
             const data = await response.json();
@@ -50,7 +51,7 @@ export default function Wallet() {
         setErrorMessage('');
 
         try {
-            const response = await fetch('http://localhost:8080/api/wallet/deposit', {
+            const response = await fetch('/api/wallet/deposit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -109,7 +110,7 @@ export default function Wallet() {
                     onChange={(e) => setDepositAmount(e.target.value)}
                     placeholder="Ingresa el monto a depositar"
                     disabled={isLoading}
-                    className="flex-1 bg-slate-950 rounded-lg px-4 py-2 border border-slate-800 focus:outline-hidden focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
+                    className="flex-1 bg-slate-950 rounded-lg px-4 py-2 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 text-white"
                 />
                 <button
                     type="submit"
