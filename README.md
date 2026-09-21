@@ -26,12 +26,16 @@ Ensure you have the following installed on your machine:
 ### 2. Database Setup (Docker & Seed Data)
 The project relies on a containerized PostgreSQL instance (`subastaya_db`) operating on the standard `public` schema. Run the container in the background:
 
+```bash
 docker compose up -d
+```
 
 To perform a clean reset of the relational schema and seed the mandatory baseline data (src/main/resources/data.sql):
 
+```bash
 docker compose down -v
 docker compose up -d
+```
 
 Note: The persistence layer enforces PhysicalNamingStrategyStandardImpl and globally_quoted_identifiers=true to maintain strict uppercase naming consistency across Hibernate and PostgreSQL.
 
@@ -39,9 +43,12 @@ Note: The persistence layer enforces PhysicalNamingStrategyStandardImpl and glob
 You will need separate terminal instances to execute all services simultaneously.
 
 Backend Core (API & SignalR Hub):
+
+```bash
 cd backend/SubastaYa.Api
 dotnet ef database update
 dotnet run
+```
 
 API Base URL: http://localhost:5000 (or the port defined in launchSettings.json).
 Swagger UI: http://localhost:5000/swagger
