@@ -1,17 +1,16 @@
-/* cSpell:disable */
 import { useState } from 'react';
 import { useToast } from '../../Context/ToastContext';
 
 const MESSAGES = {
-    invalidAmount: 'Por favor, ingresa un monto numérico válido mayor a 0.',
-    lowAmount: 'La oferta es menor al monto mínimo permitido.',
-    insufficientFunds: 'Fondos insuficientes en tu billetera virtual (Garantía Escrow).',
-    defaultError: 'Error al procesar la puja. Inténtalo de nuevo.',
-    closedAuction: 'La subasta ha finalizado. Las ofertas están cerradas.',
-    title: 'Consola de Puja Dinámica',
-    autoBid: 'Oferta Automática: $',
-    manualPlaceholder: 'Monto manual (Min: $',
-    submitBtn: 'Ofertar'
+    invalidAmount: 'Please enter a valid numeric amount greater than 0.',
+    lowAmount: 'The bid amount is lower than the minimum required increment.',
+    insufficientFunds: 'Insufficient funds in your wallet (Escrow Guarantee).',
+    defaultError: 'Error processing bid. Please try again.',
+    closedAuction: 'The auction has ended. Bidding is closed.',
+    title: 'Dynamic Bidding Console',
+    autoBid: 'Automatic Bid: $',
+    manualPlaceholder: 'Custom amount (Min: $',
+    submitBtn: 'Bid'
 };
 
 export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
@@ -38,7 +37,8 @@ export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
             return;
         }
 
-        if (walletBalance > 0 && bidAmount > Number(walletBalance)) {
+        const available = Number(walletBalance);
+        if (!isNaN(available) && available > 0 && bidAmount > available) {
             addToast(MESSAGES.insufficientFunds, 'error');
             return;
         }
@@ -48,8 +48,7 @@ export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
         try {
             await onBidSubmit(bidAmount);
             setCustomBid('');
-        } catch (error) {
-            addToast(error.message || MESSAGES.defaultError, 'error');
+        } catch {
         } finally {
             setIsLoading(false);
         }
@@ -57,31 +56,32 @@ export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
 
     if (isClosed) {
         return (
-            <div className="p-4 bg-gray-100 rounded-lg text-center font-medium text-gray-500 border border-gray-200">
+            <div className="p-4 bg-slate-900 rounded-lg text-center font-medium text-slate-400 border border-slate-800">
                 {MESSAGES.closedAuction}
             </div>
         );
     }
 
     return (
-        <div className="p-6 bg-white rounded-xl shadow-md border border-gray-100 max-w-md mx-auto">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">{MESSAGES.title}</h3>
+        <div className="p-6 bg-slate-900 rounded-xl shadow-md border border-slate-800 max-w-md mx-auto text-slate-100">
+            <h3 className="text-lg font-semibold text-white mb-4">{MESSAGES.title}</h3>
 
             <button
+                type="button"
                 onClick={() => handleBid(suggestedBid)}
                 disabled={isLoading}
-                className="w-full mb-4 bg-amber-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="w-full mb-4 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/50 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg cursor-pointer disabled:cursor-not-allowed"
             >
                 {isLoading ? (
                     <span className="animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
                 ) : (
-                    `${MESSAGES.autoBid}${suggestedBid.toLocaleString('es-AR')}`
+                    `${MESSAGES.autoBid}${suggestedBid.toLocaleString('en-US')}`
                 )}
             </button>
 
             <div className="relative flex items-center">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 font-medium">$</span>
+                    <span className="text-slate-400 font-medium">$</span>
                 </div>
 
                 <input
@@ -89,14 +89,15 @@ export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
                     value={customBid}
                     onChange={(e) => setCustomBid(e.target.value)}
                     disabled={isLoading}
-                    placeholder={`${MESSAGES.manualPlaceholder}${suggestedBid.toLocaleString('es-AR')})`}
-                    className="w-full pl-8 pr-24 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-gray-700 font-medium"
+                    placeholder={`${MESSAGES.manualPlaceholder}${suggestedBid.toLocaleString('en-US')})`}
+                    className="w-full pl-8 pr-24 py-3 bg-slate-950 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-white font-medium placeholder-slate-500"
                 />
 
                 <button
+                    type="button"
                     onClick={() => handleBid(customBid)}
                     disabled={isLoading || !customBid}
-                    className="absolute right-2 bg-gray-800 text-white text-sm font-semibold py-2 px-4 rounded-md transition-colors"
+                    className="absolute right-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 text-cyan-400 text-sm font-semibold py-2 px-4 rounded-md transition-colors cursor-pointer disabled:cursor-not-allowed"
                 >
                     {MESSAGES.submitBtn}
                 </button>

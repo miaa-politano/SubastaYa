@@ -1,4 +1,3 @@
-/* cSpell:disable */
 import { useState, useEffect, useCallback } from 'react';
 import { createAuctionHubConnection } from '../Services/AuctionHub.js';
 import { useToast } from '../Context/ToastContext';
@@ -12,7 +11,7 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
         {
             id: 1,
             amount: initialPrice,
-            bidderUsername: 'Usuario_Inicial',
+            bidderUsername: 'Initial_User',
             bidderId: 'other-user',
             timestamp: new Date().toLocaleTimeString()
         }
@@ -20,18 +19,20 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
     const [isSimulatingNetwork, setIsSimulatingNetwork] = useState(false);
 
     const handleIncomingBid = useCallback((auctionIdReceived, amount, bidderUsername, timestamp, bidderId = null) => {
-        if (Number(auctionIdReceived) !== Number(auctionId)) return;
+        if (Number(auctionIdReceived) !== Number(auctionId)) {
+            return;
+        }
 
         setCurrentPrice(amount);
-        const isCurrentBidMine = bidderId ? bidderId === currentUserId : bidderUsername === currentUserId;
+        const isCurrentBidMine = bidderId ? String(bidderId) === String(currentUserId) : bidderUsername === String(currentUserId);
 
         setLeadershipStatus((prevStatus) => {
             if (isCurrentBidMine) {
-                addToast(`Tu oferta por $${Number(amount).toLocaleString()} lidera la subasta.`, 'success');
+                addToast(`Your bid for $${Number(amount).toLocaleString('en-US')} is currently winning.`, 'success');
                 return 'leading';
             }
             if (prevStatus === 'leading') {
-                addToast(`¡Alerta! Tu oferta fue superada por ${bidderUsername}.`, 'error');
+                addToast(`Alert! Your bid was outbid by ${bidderUsername}.`, 'error');
                 return 'outbid';
             }
             return prevStatus;
@@ -50,18 +51,54 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
     }, [auctionId, currentUserId, addToast]);
 
     const handleTimeExtended = useCallback((auctionIdReceived, newEndDate, reason) => {
-        if (Number(auctionIdReceived) !== Number(auctionId)) return;
-        if (onAntiSnipingExtend) onAntiSnipingExtend();
-        addToast(`⏳ Anti-Sniping activado: Subasta extendida +2 minutos (${reason || 'Oferta en último minuto'}).`, 'warning', 6000);
+        if (Number(auctionIdReceived) !== Number(auctionId)) {
+            return;
+        }
+        if (onAntiSnipingExtend) {
+            onAntiSnipingExtend();
+        }
+        addToast(`Anti-Sniping triggered: Auction extended +2 minutes (${reason || 'Last minute bid'}).`, 'warning', 6000);
     }, [auctionId, onAntiSnipingExtend, addToast]);
 
     const handleAuctionClosed = useCallback((auctionIdReceived, winnerUsername, finalAmount) => {
-        if (Number(auctionIdReceived) !== Number(auctionId)) return;
-        addToast(`🏆 Subasta finalizada. Ganador: ${winnerUsername} ($${Number(finalAmount).toLocaleString()})`, 'info', 7000);
+        if (Number(auctionIdReceived) !== Number(auctionId)) {
+            return;
+        }
+        addToast(`Auction closed. Winner: ${winnerUsername} ($${Number(finalAmount).toLocaleString('en-US')})`, 'info', 7000);
     }, [auctionId, addToast]);
+
+    const parseNumericBidderId = (user) => {
+        if (typeof user === 'number' && !isNaN(user)) {
+            return user;
+        }
+        if (user && typeof user === 'object' && user.id) {
+            return parseNumericBidderId(user.id);
+        }
+        if (typeof user === 'string') {
+            const matches = user.match(/\d+/);
+            if (matches) {
+                return parseInt(matches[0], 10);
+            }
+            if (user.toLowerCase().includes('comprador2') || user.toLowerCase().includes('general')) {
+                return 3;
+            }
+            if (user.toLowerCase().includes('comprador1')) {
+                return 2;
+            }
+            if (user.toLowerCase().includes('vendedor')) {
+                return 1;
+            }
+            if (user.toLowerCase().includes('sinfondos')) {
+                return 4;
+            }
+        }
+        return 3;
+    };
 
     const handleBidSubmit = async (amount) => {
         setIsSimulatingNetwork(true);
+        const numericBidderId = parseNumericBidderId(currentUserId);
+
         try {
             const response = await fetch(`/api/auctions/${auctionId}/bids`, {
                 method: 'POST',
@@ -69,28 +106,35 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    bidderId: Number(currentUserId),
+                    bidderId: numericBidderId,
                     amount: Number(amount)
                 })
             });
 
             if (response.ok) {
-                handleIncomingBid(auctionId, amount, 'TÚ', new Date().toISOString(), currentUserId);
-                addToast(`¡Puja enviada con éxito por $${Number(amount).toLocaleString()}!`, 'success');
+                handleIncomingBid(auctionId, amount, 'YOU', new Date().toISOString(), numericBidderId);
 
                 if (onBidSuccess) {
-                    onBidSuccess();
+                    onBidSuccess(amount);
                 }
-            } else if (response.status === 409) {
-                addToast('HTTP 409 Conflict: Oferta rechazada por concurrencia (bloqueo optimista).', 'error');
-            } else if (response.status === 400 || response.status === 422) {
-                addToast('Error de validación: Saldo insuficiente o monto menor al incremento.', 'warning');
-            } else {
-                addToast('Error al procesar la oferta en el servidor.', 'error');
+                return true;
             }
+            if (response.status === 409) {
+                addToast('HTTP 409 Conflict: Bid rejected due to optimistic concurrency lock.', 'error');
+                throw new Error('Concurrency collision while processing bid.');
+            }
+            if (response.status === 400 || response.status === 422) {
+                addToast('Validation error: Insufficient funds or bid below minimum increment.', 'warning');
+                throw new Error('Balance validation or increment check failed.');
+            }
+            addToast(`Server error (${response.status}) while placing bid.`, 'error');
+            throw new Error('Internal backend error.');
         } catch (error) {
-            console.error("Fallo de red en la puja:", error);
-            addToast('Error de red. No se pudo conectar con el microservicio de Java.', 'error');
+            console.error('Bid submission error:', error);
+            if (!error.message || error.message.includes('Failed to fetch')) {
+                addToast('Network error: Unable to reach the auction service.', 'error');
+            }
+            throw error;
         } finally {
             setIsSimulatingNetwork(false);
         }
