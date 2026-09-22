@@ -62,9 +62,11 @@ Port: http://localhost:8080
 OpenAPI Documentation: http://localhost:8080/swagger-ui.html
 
 Frontend (React Client):
+```bash
 cd frontend
 npm install
 npm run dev
+```
 
 Web Client: http://localhost:5173
 
@@ -85,7 +87,9 @@ To satisfy strict academic evaluation criteria for concurrency control and trans
 ### TEST 1: Simultaneous Concurrency with Identical Amounts (TASK-028)
 Simulates two distinct users (User 2 and User 3) submitting identical bids ($150,000.00) within the exact same millisecond:
 
+```bash
 docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"AVAILABLE_BALANCE\" = 500000.00, \"TOTAL_BALANCE\" = 500000.00 WHERE \"USER_ID\" IN (2, 3); UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVAS', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '2 days' WHERE \"ID\" = 1;" && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 2, "amount": 150000.00}' & curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 3, "amount": 150000.00}' & wait
+```
 
 Real Console Output:
 HTTP/1.1 409
@@ -100,7 +104,9 @@ Mechanism: Both concurrent threads read the initial price simultaneously. Upon c
 ### TEST 2: Escrow Guarantee Rejection (Insufficient Balance)
 Evaluates an insolvent bidder (USER_ID = 4 with $500.00 available) trying to bid $150,000.00:
 
+```bash
 docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"TOTAL_BALANCE\" = 500.00, \"AVAILABLE_BALANCE\" = 500.00, \"LOCKED_BALANCE\" = 0.00 WHERE \"USER_ID\" = 4; UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVAS', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '2 days' WHERE \"ID\" = 1;" && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 4, "amount": 150000.00}'
+```
 
 Real Console Output:
 HTTP/1.1 400
@@ -113,7 +119,9 @@ Mechanism: WalletService inspects the user's available funds prior to state modi
 ### TEST 3: Anti-Sniping Rule (Automatic Time Extension)
 Tests a valid bid received within the critical 60-second window prior to auction closing:
 
+```bash
 docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"AVAILABLE_BALANCE\" = 500000.00, \"TOTAL_BALANCE\" = 500000.00 WHERE \"USER_ID\" = 3; UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVAS', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '45 seconds' WHERE \"ID\" = 1;" && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 3, "amount": 150000.00}' && echo -e "\n🔍 AUDITING EXTENSION IN DATABASE:" && docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "SELECT \"ID\", \"END_DATE_UTC\" AS \"NEW_EXTENDED_DATE\", \"CURRENT_PRICE\" FROM \"AUCTION\" WHERE \"ID\" = 1;"
+```
 
 Real Console Output:
 HTTP/1.1 200
@@ -129,7 +137,9 @@ Mechanism: Detecting that the auction is set to expire in 45 seconds, the servic
 ### TEST 4: Background Worker (Deserted Auction - TASK-022)
 Tests scheduled background processing of an expired auction without bids:
 
+```bash
 docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "INSERT INTO \"AUCTION\" (\"ID\", \"SELLER_ID\", \"CATEGORY_ID\", \"TITLE\", \"DESCRIPTION\", \"STARTING_PRICE\", \"CURRENT_PRICE\", \"MIN_INCREMENT\", \"START_DATE_UTC\", \"END_DATE_UTC\", \"STATUS\", \"VERSION\") VALUES (100, 1, 1, 'Subasta Desierta Test', 'Validating TASK-022', 50000.00, 50000.00, 2000.00, CURRENT_TIMESTAMP - INTERVAL '2 days', CURRENT_TIMESTAMP - INTERVAL '5 minutes', 'ACTIVAS', 0) ON CONFLICT (\"ID\") DO UPDATE SET \"STATUS\" = 'ACTIVAS', \"END_DATE_UTC\" = CURRENT_TIMESTAMP - INTERVAL '5 minutes', \"CURRENT_WINNER_ID\" = NULL;" && echo "⏳ Waiting 11 seconds for background worker..." && sleep 11 && echo -e "\n🔍 AUDITING FINAL STATUS FOR AUCTION 100:" && docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "SELECT \"ID\", \"TITLE\", \"STATUS\", \"CURRENT_WINNER_ID\" FROM \"AUCTION\" WHERE \"ID\" = 100;"
+```
 
 Real Console Output:
 AUDITING FINAL STATUS FOR AUCTION 100:
@@ -142,7 +152,9 @@ Mechanism: The worker sweeps expired auctions periodically (10-second interval i
 ### TEST 5: Escrow Fund Release & Guarantee Return (Wallet Clearing)
 Verifies atomic fund management when a leading bid is outbid:
 
+```bash
 docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"AVAILABLE_BALANCE\" = 500000.00, \"TOTAL_BALANCE\" = 500000.00, \"LOCKED_BALANCE\" = 0.00 WHERE \"USER_ID\" IN (2, 3); UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVAS', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '2 days', \"CURRENT_WINNER_ID\" = NULL WHERE \"ID\" = 1;" && curl -s -o /dev/null -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 2, "amount": 150000.00}' && sleep 1 && curl -s -o /dev/null -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 3, "amount": 160000.00}' && echo -e "\n🔍 AUDITING FINAL WALLET BALANCES:" && docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "SELECT \"USER_ID\", \"TOTAL_BALANCE\", \"AVAILABLE_BALANCE\", \"LOCKED_BALANCE\" FROM \"WALLET\" WHERE \"USER_ID\" IN (2, 3) ORDER BY \"USER_ID\";"
+```
 
 Real Console Output:
 🔍 AUDITING FINAL WALLET BALANCES:
