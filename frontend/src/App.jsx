@@ -14,10 +14,13 @@ function AppContent() {
   const [userBalance, setUserBalance] = useState(105000);
   const [userEscrow, setUserEscrow] = useState(45000);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('ACTIVAS');
 
   const currentUser = {
-    id: 2,
-    name: 'Comprador_General'
+    id: 3,
+    name: 'comprador2'
   };
 
   const triggerBalanceRefresh = useCallback(() => {
@@ -37,11 +40,19 @@ function AppContent() {
   }, [currentView, currentUser.id, triggerBalanceRefresh]);
 
   useEffect(() => {
-    fetch(`/api/auctions?page=0&size=10&_t=${Date.now()}`)
+    const params = new URLSearchParams({
+      page: '0',
+      size: '10',
+      _t: String(Date.now())
+    });
+    if (minPrice) params.append('minPrice', minPrice);
+    if (maxPrice) params.append('maxPrice', maxPrice);
+
+    fetch(`/api/auctions?${params.toString()}`)
         .then((res) => res.json())
         .then((data) => setAuctions(data.content || data['content'] || []))
         .catch((err) => console.error("Error fetching catalog:", err));
-  }, [currentView]);
+  }, [currentView, minPrice, maxPrice]);
 
   const handleOpenRoom = (auctionId) => {
     setPreviousView(currentView);
@@ -50,26 +61,23 @@ function AppContent() {
   };
 
   const handleFakeBidSimulation = (amount) => {
-    const finalBidAmount = Number(amount);
-    const increment = selectedAuctionId === 2 ? 2000 : 5000;
-
-    setUserBalance(prev => Math.max(0, prev - increment));
-    setUserEscrow(prev => prev + increment);
-
-    setAuctions(prevAuctions => prevAuctions.map(auc =>
-        auc.id === selectedAuctionId ? { ...auc, currentPrice: finalBidAmount } : auc
-    ));
+    const finalBidAmount = String(amount);
 
     return fetch(`/api/auctions/${selectedAuctionId}/bids`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bidderId: currentUser.id, amount: finalBidAmount })
     })
-        .then(() => {
+        .then(async (res) => {
+          if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText || "Error en el servidor");
+          }
           triggerBalanceRefresh();
         })
         .catch((err) => {
-          console.warn("Bypass controlado:", err);
+          console.error("Error al procesar la puja:", err);
+          throw err;
         });
   };
 
@@ -140,6 +148,7 @@ function AppContent() {
                 {(() => {
                   const currentAuction = auctions.find(a => a.id === selectedAuctionId);
                   const priceToPass = currentAuction ? (currentAuction.currentPrice || currentAuction.initialPrice) : 100000;
+                  const dateToPass = currentAuction ? (currentAuction.endDateUtc || currentAuction.endDate || currentAuction['END_DATE_UTC']) : null;
                   return (
                       <AuctionRoom
                           auctionId={selectedAuctionId}
@@ -147,6 +156,7 @@ function AppContent() {
                           currentUserId={currentUser.id}
                           walletBalance={userBalance}
                           onBidSubmit={handleFakeBidSimulation}
+                          auctionEndDate={dateToPass}
                       />
                   );
                 })()}
@@ -158,18 +168,23 @@ function AppContent() {
           )}
 
           {currentView === 'wallet' && (
-              <Wallet />
+              <Wallet
+                  balance={userBalance}
+                  escrow={userEscrow}
+                  userId={currentUser.id}
+                  onRefresh={triggerBalanceRefresh}
+              />
           )}
 
           {currentView === 'catalog' && (
               <div className="space-y-6">
-                <div className="flex justify-between items-end">
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-white">Subastas Activas</h2>
-                    <p className="text-sm text-slate-400">Explora ofertas y participa en tiempo real</p>
-                  </div>
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-white">Subastas Activas</h2>
+                  <p className="text-sm text-slate-400">Explora ofertas y participa en tiempo real</p>
+                </div>
 
-                  <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-800 text-[11px]">
+                <div className="flex flex-wrap gap-4 justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-800 my-4">
+                  <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px]">
                     {['Todos', 'Tecnología', 'Coleccionables', 'Vehículos'].map((cat) => (
                         <span
                             key={cat}
@@ -182,11 +197,55 @@ function AppContent() {
                       </span>
                     ))}
                   </div>
+
+                  <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px]">
+                    {[
+                      { id: 'ACTIVE', label: 'Activas' },
+                      { id: 'PROXIMA', label: 'Próximas' },
+                      { id: 'FINALIZADA', label: 'Finalizadas' }
+                    ].map((st) => (
+                        <span
+                            key={st.id}
+                            onClick={() => setSelectedStatus(st.id)}
+                            className={`px-3 py-1 font-medium rounded-md cursor-pointer transition-colors ${
+                                selectedStatus === st.id ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                        >
+                        {st.label}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-3 items-center">
+                    <span className="text-xs text-slate-400 font-medium">Rango de precio:</span>
+                    <input
+                        type="number"
+                        placeholder="Min"
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                        className="bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs w-24 text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                    />
+                    <input
+                        type="number"
+                        placeholder="Max"
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                        className="bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs w-24 text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {auctions
-                      .filter((item) => item.status === 'ACTIVA' || item.status === 'ACTIVE' || item.status === 'ACTIVAS')
+                      .filter((item) => {
+                        const itemStatus = (item.status || '').toUpperCase();
+                        const targetStatus = selectedStatus.toUpperCase();
+                        if (targetStatus === 'ALL' || targetStatus === 'TODOS') return true;
+                        if (targetStatus === 'ACTIVE' || targetStatus === 'ACTIVA') {
+                          return itemStatus === 'ACTIVE' || itemStatus === 'ACTIVA' || itemStatus === 'ACTIVAS';
+                        }
+                        return itemStatus === targetStatus;
+                      })
                       .filter((item) => {
                         if (selectedCategory === 'Todos') return true;
                         const catId = item.categoryId || item['categoryId'] || item['CATEGORY_ID'];

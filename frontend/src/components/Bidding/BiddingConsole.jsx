@@ -38,10 +38,10 @@ export const BiddingConsole = ({ auction, onBidSubmit, walletBalance }) => {
             return;
         }
 
-        if (walletBalance > 0 && bidAmount > Number(walletBalance)) {
-            addToast(MESSAGES.insufficientFunds, 'error');
-            return;
-        }
+//        if (walletBalance > 0 && bidAmount > Number(walletBalance)) {
+//            addToast(MESSAGES.insufficientFunds, 'error');
+//            return;
+//        }
 
         setIsLoading(true);
 

@@ -1,6 +1,5 @@
 /* cSpell:disable */
-import { useState, useEffect, useCallback } from 'react';
-import { createAuctionHubConnection } from '../Services/AuctionHub.js';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '../Context/ToastContext';
 
 export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiSnipingExtend, onBidSuccess) => {
@@ -96,19 +95,39 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
         }
     };
 
+    const socketRef = useRef(null);
+
     useEffect(() => {
-        const handlers = {
-            onNewBid: handleIncomingBid,
-            onTimeExtended: handleTimeExtended,
-            onAuctionClosed: handleAuctionClosed
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/auction/${auctionId}`;
+
+        const ws = new WebSocket(wsUrl);
+        socketRef.current = ws;
+
+        ws.onopen = () => {
+            setConnectionStatus('connected');
         };
 
-        const connection = createAuctionHubConnection(auctionId, handlers, setConnectionStatus);
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'BID') {
+                    handleIncomingBid(data.auctionId, data.amount, data.bidderUsername, data.timestamp, data.bidderId);
+                } else if (data.type === 'EXTENDED') {
+                    handleTimeExtended(data.auctionId, data.newEndDate, data.reason);
+                } else if (data.type === 'CLOSED') {
+                    handleAuctionClosed(data.auctionId, data.winnerUsername, data.finalAmount);
+                }
+            } catch (err) {
+                console.error("Error parseando mensaje WebSocket:", err);
+            }
+        };
+
+        ws.onerror = () => setConnectionStatus('offline');
+        ws.onclose = () => setConnectionStatus('offline');
 
         return () => {
-            if (connection) {
-                connection.stop().catch(() => {});
-            }
+            if (ws) ws.close();
         };
     }, [auctionId, handleIncomingBid, handleTimeExtended, handleAuctionClosed]);
 

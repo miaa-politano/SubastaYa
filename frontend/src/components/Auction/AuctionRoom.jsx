@@ -14,18 +14,28 @@ export const AuctionRoom = ({
                                 initialPrice = 1450000,
                                 currentUserId,
                                 walletBalance,
-                                onRefreshBalance
+                                onBidSubmit,
+                                auctionEndDate
                             }) => {
     const { addToast } = useToast();
-    const [timeLeft, setTimeLeft] = useState(75);
+
+    const [timeLeft, setTimeLeft] = useState(600);
 
     useEffect(() => {
-        if (timeLeft <= 0) return;
-        const interval = setInterval(() => {
-            setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-        }, 1000);
+        if (!auctionEndDate) return;
+
+        const updateTimer = () => {
+            const targetTime = new Date(auctionEndDate).getTime();
+            if (isNaN(targetTime)) return;
+            const diff = Math.floor((targetTime - Date.now()) / 1000);
+            setTimeLeft(diff > 0 ? diff : 0);
+        };
+
+        updateTimer();
+
+        const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
-    }, [timeLeft]);
+    }, [auctionEndDate]);
 
     const {
         currentPrice,
@@ -38,7 +48,7 @@ export const AuctionRoom = ({
         handleBidSubmit
     } = useAuctionSocket(auctionId, initialPrice, currentUserId, () => {
         setTimeLeft((prev) => prev + 120);
-    }, onRefreshBalance);
+    }, onBidSubmit);
 
     const simulateNetworkRequest = (type) => {
         if (type === '409') {
@@ -60,7 +70,7 @@ export const AuctionRoom = ({
 
     const auctionData = {
         currentPrice: currentPrice,
-        minIncrement: auctionId === 2 ? 2000 : 5000, // Usa los $5.000 del seed para la Subasta #1 y $2.000 para la #2
+        minIncrement: auctionId === 2 ? 2000 : 5000,
         isClosed
     };
 

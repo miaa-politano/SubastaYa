@@ -1,31 +1,22 @@
-/* cSpell:disable */
 import { useState, useEffect, useCallback } from 'react';
 
-export default function Wallet() {
-    const [balance, setBalance] = useState({ total: 0, available: 0, escrow: 0 });
+export default function Wallet({ balance: globalBalance, escrow: globalEscrow, userId, onRefresh }) {
     const [depositAmount, setDepositAmount] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-
-    const userId = 2;
 
     const fetchWalletBalance = useCallback(async () => {
         try {
             const response = await fetch(`/api/wallet/balance?userId=${userId}`);
             if (!response.ok) return;
 
-            const data = await response.json();
-            setBalance({
-                total: data.totalBalance || 0,
-                available: data.availableBalance || 0,
-                escrow: data.lockedBalance || 0
-            });
+            if (onRefresh) onRefresh();
             setErrorMessage('');
         } catch (error) {
             setErrorMessage('Error al conectar con el microservicio financiero.');
             console.error(error);
         }
-    }, [userId]);
+    }, [userId, onRefresh]);
 
     useEffect(() => {
         let isMounted = true;
@@ -90,15 +81,15 @@ export default function Wallet() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Saldo Disponible</p>
-                    <h3 className="text-2xl font-bold text-cyan-400 mt-1">${balance.available.toLocaleString('es-AR')}</h3>
+                    <h3 className="text-2xl font-bold text-cyan-400 mt-1">${(globalBalance || 0).toLocaleString('es-AR')}</h3>
                 </div>
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Saldo en Garantía (Escrow)</p>
-                    <h3 className="text-2xl font-bold text-amber-500 mt-1">${balance.escrow.toLocaleString('es-AR')}</h3>
+                    <h3 className="text-2xl font-bold text-amber-500 mt-1">${(globalEscrow || 0).toLocaleString('es-AR')}</h3>
                 </div>
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total de Fondos</p>
-                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">${balance.total.toLocaleString('es-AR')}</h3>
+                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">${((globalBalance || 0) + (globalEscrow || 0)).toLocaleString('es-AR')}</h3>
                 </div>
             </div>
 
