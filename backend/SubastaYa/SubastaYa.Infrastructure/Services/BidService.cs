@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SubastaYa.Domain.DTOs;
 using SubastaYa.Domain.Entities;
 using SubastaYa.Domain.Exceptions;
@@ -71,6 +71,8 @@ public class BidService : IBidService
                 auction.EndDateUtc = auction.EndDateUtc.AddMinutes(2);
                 wasExtended = true;
             }
+
+            auction.Version++;
 
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using SubastaYa.Api.Contracts;
 using SubastaYa.Api.Models;
 
@@ -31,7 +31,7 @@ public class AuctionsController : ControllerBase
             1000m,
             0,
             DateTime.UtcNow.AddHours(2),
-            "ACTIVE"
+            "ACTIVAS"
         ));
     }
 
@@ -66,34 +66,5 @@ public class AuctionsController : ControllerBase
         }
 
         return CreatedAtAction(nameof(GetAuctionById), new { id = 1 }, request);
-    }
-
-    [HttpPost("{id:int}/bids")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
-    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status422UnprocessableEntity)]
-    public IActionResult PlaceBid([FromRoute] int id, [FromBody] PlaceBidRequest request)
-    {
-        if (request.Amount <= 0)
-        {
-            return BadRequest(new ErrorResponse
-            {
-                StatusCode = StatusCodes.Status400BadRequest,
-                Title = "Bad Request - Validation Error",
-                Detail = "Bid amount must be strictly greater than zero.",
-                Instance = HttpContext.Request.Path,
-                TimestampUtc = DateTime.UtcNow
-            });
-        }
-
-        // Domain logic and concurrency conflict handling (409) will be orchestrated via bidding service
-        return Ok(new
-        {
-            auctionId = id,
-            placedAmount = request.Amount,
-            status = "Accepted",
-            timestampUtc = DateTime.UtcNow
-        });
     }
 }
