@@ -3,56 +3,54 @@ import { useState, useEffect, useCallback } from 'react';
 import { AuctionRoom } from './components/Auction/AuctionRoom.jsx';
 import { UserActivity } from './components/Activity/UserActivity.jsx';
 import { AuctionCard } from './components/Auction/AuctionCard.jsx';
-import { ToastProvider } from './Context/ToastContext';
+import { ToastProvider } from './Context/ToastContext.jsx';
 import Wallet from './components/Wallet/Wallet.jsx';
+import { AuctionCreationModal } from './components/Auction/AuctionCreationModal.jsx';
+
+const SEED_USERS = [
+  { id: 2, name: 'comprador1 (Líder $105k)', email: 'comprador1@test.com' },
+  { id: 3, name: 'comprador2 (Habilitado $200k)', email: 'comprador2@test.com' },
+  { id: 4, name: 'sinfondos ($500)', email: 'sinfondos@test.com' },
+  { id: 1, name: 'vendedor', email: 'vendedor@test.com' }
+];
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('catalog');
   const [previousView, setPreviousView] = useState('catalog');
   const [selectedAuctionId, setSelectedAuctionId] = useState(1);
   const [auctions, setAuctions] = useState([]);
-  const [userBalance, setUserBalance] = useState(105000);
-  const [userEscrow, setUserEscrow] = useState(45000);
+  const [userBalance, setUserBalance] = useState(0);
+  const [userEscrow, setUserEscrow] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('ACTIVAS');
-
-  const currentUser = {
-    id: 3,
-    name: 'comprador2'
-  };
+  const [currentUser, setCurrentUser] = useState(SEED_USERS[1]); // Default comprador2 para ofertar
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const triggerBalanceRefresh = useCallback(() => {
     fetch(`/api/wallet/balance?userId=${currentUser.id}`)
         .then((res) => res.json())
         .then((data) => {
           if (data) {
-            setUserBalance(data.availableBalance || data['availableBalance'] || 105000);
-            setUserEscrow(data.lockedBalance || data['lockedBalance'] || 45000);
+            setUserBalance(data.availableBalance || 0);
+            setUserEscrow(data.lockedBalance || 0);
           }
         })
         .catch((err) => console.error("Error fetching financial metrics:", err));
   }, [currentUser.id]);
 
+  const fetchCatalog = useCallback(() => {
+    fetch(`/api/auctions?page=0&size=20&_t=${Date.now()}`)
+        .then((res) => res.json())
+        .then((data) => setAuctions(data.content || []))
+        .catch((err) => console.error("Error fetching catalog:", err));
+  }, []);
+
   useEffect(() => {
     triggerBalanceRefresh();
-  }, [currentView, currentUser.id, triggerBalanceRefresh]);
+  }, [currentUser, triggerBalanceRefresh]);
 
   useEffect(() => {
-    const params = new URLSearchParams({
-      page: '0',
-      size: '10',
-      _t: String(Date.now())
-    });
-    if (minPrice) params.append('minPrice', minPrice);
-    if (maxPrice) params.append('maxPrice', maxPrice);
-
-    fetch(`/api/auctions?${params.toString()}`)
-        .then((res) => res.json())
-        .then((data) => setAuctions(data.content || data['content'] || []))
-        .catch((err) => console.error("Error fetching catalog:", err));
-  }, [currentView, minPrice, maxPrice]);
+    fetchCatalog();
+  }, [currentView, fetchCatalog]);
 
   const handleOpenRoom = (auctionId) => {
     setPreviousView(currentView);
@@ -60,35 +58,16 @@ function AppContent() {
     setCurrentView('room');
   };
 
-  const handleFakeBidSimulation = (amount) => {
-    const finalBidAmount = String(amount);
-
-    return fetch(`/api/auctions/${selectedAuctionId}/bids`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bidderId: currentUser.id, amount: finalBidAmount })
-    })
-        .then(async (res) => {
-          if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(errorText || "Error en el servidor");
-          }
-          triggerBalanceRefresh();
-        })
-        .catch((err) => {
-          console.error("Error al procesar la puja:", err);
-          throw err;
-        });
-  };
+  const selectedAuction = auctions.find(a => a.id === selectedAuctionId);
 
   return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
         <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-40">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center gap-4 flex-wrap">
             <div className="flex items-center gap-6">
               <h1
                   onClick={() => setCurrentView('catalog')}
-                  className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-blue-500 cursor-pointer"
+                  className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 cursor-pointer"
               >
                 SubastaYa
               </h1>
@@ -120,18 +99,38 @@ function AppContent() {
               </nav>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+              >
+                + Publicar Subasta
+              </button>
+
+              <div className="bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-2 text-xs">
+                <span className="text-slate-400">Usuario:</span>
+                <select
+                    value={currentUser.id}
+                    onChange={(e) => {
+                      const found = SEED_USERS.find(u => u.id === Number(e.target.value));
+                      if (found) setCurrentUser(found);
+                    }}
+                    className="bg-slate-900 text-white font-bold rounded px-1.5 py-0.5 border border-slate-600 focus:outline-none"
+                >
+                  {SEED_USERS.map(u => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 text-xs">
-                <span className="text-slate-400">Disponible:</span>
+                <span className="text-slate-400">Disp:</span>
                 <strong className="text-emerald-400">${userBalance.toLocaleString('es-AR')}</strong>
               </div>
               <div className="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 text-xs">
-                <span className="text-slate-400">Retenido:</span>
+                <span className="text-slate-400">Escrow:</span>
                 <strong className="text-amber-500">${userEscrow.toLocaleString('es-AR')}</strong>
               </div>
-              <span className="text-xs text-slate-400 ml-2">
-                Usuario: <strong className="text-slate-200">{currentUser.name}</strong>
-              </span>
             </div>
           </div>
         </header>
@@ -143,23 +142,21 @@ function AppContent() {
                     onClick={() => setCurrentView(previousView)}
                     className="px-4 py-2 text-xs font-semibold bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-lg transition-colors inline-flex items-center gap-2"
                 >
-                  ← Volver atrás
+                  ← Volver al Catálogo
                 </button>
-                {(() => {
-                  const currentAuction = auctions.find(a => a.id === selectedAuctionId);
-                  const priceToPass = currentAuction ? (currentAuction.currentPrice || currentAuction.initialPrice) : 100000;
-                  const dateToPass = currentAuction ? (currentAuction.endDateUtc || currentAuction.endDate || currentAuction['END_DATE_UTC']) : null;
-                  return (
-                      <AuctionRoom
-                          auctionId={selectedAuctionId}
-                          initialPrice={priceToPass}
-                          currentUserId={currentUser.id}
-                          walletBalance={userBalance}
-                          onBidSubmit={handleFakeBidSimulation}
-                          auctionEndDate={dateToPass}
-                      />
-                  );
-                })()}
+                <AuctionRoom
+                    auctionId={selectedAuctionId}
+                    initialPrice={selectedAuction?.currentPrice || selectedAuction?.startingPrice || 100000}
+                    minIncrement={selectedAuction?.minIncrement || 5000}
+                    currentUserId={currentUser.id}
+                    walletBalance={userBalance}
+                    auctionEndDate={selectedAuction?.endDateUtc || selectedAuction?.endDate}
+                    auctionTitle={selectedAuction?.title || `Subasta #${selectedAuctionId}`}
+                    onBidSuccess={() => {
+                      triggerBalanceRefresh();
+                      fetchCatalog();
+                    }}
+                />
               </div>
           )}
 
@@ -178,14 +175,14 @@ function AppContent() {
 
           {currentView === 'catalog' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight text-white">Subastas Activas</h2>
-                  <p className="text-sm text-slate-400">Explora ofertas y participa en tiempo real</p>
-                </div>
+                <div className="flex justify-between items-end">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-white">Subastas en Vivo</h2>
+                    <p className="text-sm text-slate-400">Explora ofertas activas con garantía Escrow</p>
+                  </div>
 
-                <div className="flex flex-wrap gap-4 justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-800 my-4">
-                  <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px]">
-                    {['Todos', 'Tecnología', 'Coleccionables', 'Vehículos'].map((cat) => (
+                  <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-800 text-[11px]">
+                    {['Todos', 'Tecnología', 'Coleccionables', 'Indumentaria', 'Vehículos'].map((cat) => (
                         <span
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
@@ -197,60 +194,13 @@ function AppContent() {
                       </span>
                     ))}
                   </div>
-
-                  <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px]">
-                    {[
-                      { id: 'ACTIVE', label: 'Activas' },
-                      { id: 'PROXIMA', label: 'Próximas' },
-                      { id: 'FINALIZADA', label: 'Finalizadas' }
-                    ].map((st) => (
-                        <span
-                            key={st.id}
-                            onClick={() => setSelectedStatus(st.id)}
-                            className={`px-3 py-1 font-medium rounded-md cursor-pointer transition-colors ${
-                                selectedStatus === st.id ? 'bg-slate-800 text-amber-400' : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                        >
-                        {st.label}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-3 items-center">
-                    <span className="text-xs text-slate-400 font-medium">Rango de precio:</span>
-                    <input
-                        type="number"
-                        placeholder="Min"
-                        value={minPrice}
-                        onChange={(e) => setMinPrice(e.target.value)}
-                        className="bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs w-24 text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                    />
-                    <input
-                        type="number"
-                        placeholder="Max"
-                        value={maxPrice}
-                        onChange={(e) => setMaxPrice(e.target.value)}
-                        className="bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs w-24 text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                    />
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {auctions
                       .filter((item) => {
-                        const itemStatus = (item.status || '').toUpperCase();
-                        const targetStatus = selectedStatus.toUpperCase();
-                        if (targetStatus === 'ALL' || targetStatus === 'TODOS') return true;
-                        if (targetStatus === 'ACTIVE' || targetStatus === 'ACTIVA') {
-                          return itemStatus === 'ACTIVE' || itemStatus === 'ACTIVA' || itemStatus === 'ACTIVAS';
-                        }
-                        return itemStatus === targetStatus;
-                      })
-                      .filter((item) => {
                         if (selectedCategory === 'Todos') return true;
-                        const catId = item.categoryId || item['categoryId'] || item['CATEGORY_ID'];
-                        if (selectedCategory === 'Tecnología' && (catId === 1 || item.id === 1 || item.id === 2)) return true;
-                        return item.categoryName === selectedCategory || item['categoryName'] === selectedCategory;
+                        return item.categoryName === selectedCategory || item.category?.name === selectedCategory;
                       })
                       .map((item) => (
                           <AuctionCard
@@ -263,6 +213,13 @@ function AppContent() {
               </div>
           )}
         </main>
+
+        <AuctionCreationModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onCreated={fetchCatalog}
+            sellerId={currentUser.id}
+        />
       </div>
   );
 }

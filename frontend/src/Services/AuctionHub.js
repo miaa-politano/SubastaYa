@@ -1,14 +1,10 @@
 ﻿import * as signalR from '@microsoft/signalr';
 
-const HUB_URL = 'https://localhost:7073/hubs/auction';
-
 export const createAuctionHubConnection = (auctionId, handlers = {}, onStatusChange) => {
     const connection = new signalR.HubConnectionBuilder()
-        .withUrl(HUB_URL, {
-            withCredentials: true
-        })
+        .withUrl('/hubs/auction')
         .withAutomaticReconnect([0, 2000, 5000, 10000])
-        .configureLogging(signalR.LogLevel.None) // Evita saturar la consola si el backend está apagado
+        .configureLogging(signalR.LogLevel.Information)
         .build();
 
     if (handlers.onNewBid) {
@@ -42,7 +38,8 @@ export const createAuctionHubConnection = (auctionId, handlers = {}, onStatusCha
             if (onStatusChange) onStatusChange('connected');
             await connection.invoke('JoinAuctionGroup', String(auctionId));
         })
-        .catch(() => {
+        .catch((err) => {
+            console.error('Error conectando a SignalR:', err);
             if (onStatusChange) onStatusChange('disconnected');
         });
 

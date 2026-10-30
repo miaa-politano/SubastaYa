@@ -11,31 +11,41 @@ import { BiddingConsole } from '../Bidding/BiddingConsole.jsx';
 
 export const AuctionRoom = ({
                                 auctionId = 1,
-                                initialPrice = 1450000,
+                                initialPrice = 100000,
+                                minIncrement = 5000,
                                 currentUserId,
                                 walletBalance,
-                                onBidSubmit,
-                                auctionEndDate
+                                onBidSuccess,
+                                auctionEndDate,
+                                auctionTitle = "Artículo en Subasta"
                             }) => {
     const { addToast } = useToast();
-
-    const [timeLeft, setTimeLeft] = useState(600);
+    const [endDate, setEndDate] = useState(auctionEndDate);
+    const [timeLeft, setTimeLeft] = useState(0);
 
     useEffect(() => {
-        if (!auctionEndDate) return;
+        if (auctionEndDate) {
+            const timer = setTimeout(() => {
+                setEndDate(auctionEndDate);
+            }, 0);
+            return () => clearTimeout(timer);
+        }
+    }, [auctionEndDate]);
+
+    useEffect(() => {
+        if (!endDate) return;
 
         const updateTimer = () => {
-            const targetTime = new Date(auctionEndDate).getTime();
+            const targetTime = new Date(String(endDate || Date.now())).getTime();
             if (isNaN(targetTime)) return;
             const diff = Math.floor((targetTime - Date.now()) / 1000);
             setTimeLeft(diff > 0 ? diff : 0);
         };
 
         updateTimer();
-
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
-    }, [auctionEndDate]);
+    }, [endDate]);
 
     const {
         currentPrice,
@@ -46,31 +56,25 @@ export const AuctionRoom = ({
         handleIncomingBid,
         handleTimeExtended,
         handleBidSubmit
-    } = useAuctionSocket(auctionId, initialPrice, currentUserId, () => {
-        setTimeLeft((prev) => prev + 120);
-    }, onBidSubmit);
-
-    const simulateNetworkRequest = (type) => {
-        if (type === '409') {
-            addToast('HTTP 409 Conflict: Oferta concurrente rechazada por bloqueo optimista.', 'error');
-        } else if (type === '422') {
-            addToast('HTTP 422 Unprocessable Entity: Saldo disponible insuficiente para cubrir la garantía.', 'error');
-        }
-    };
-
-    const getRoomItemTitle = () => {
-        if (auctionId === 99) return "Notebook Gamer ASUS ROG Strix";
-        if (auctionId === 100) return "Monitor Gaming 27'' Curved 165Hz";
-        if (auctionId === 1) return "Notebook Gamer Lenovo Legion";
-        if (auctionId === 2) return "Monitor 27'' 165Hz IPS";
-        return "Artículo de Tecnología";
-    };
+    } = useAuctionSocket(
+        auctionId,
+        initialPrice,
+        currentUserId,
+        (newEndDateUtc) => {
+            if (newEndDateUtc) {
+                setEndDate(newEndDateUtc);
+            } else {
+                setTimeLeft((prev) => prev + 120);
+            }
+        },
+        onBidSuccess
+    );
 
     const isClosed = timeLeft <= 0;
 
     const auctionData = {
-        currentPrice: currentPrice,
-        minIncrement: auctionId === 2 ? 2000 : 5000,
+        currentPrice,
+        minIncrement: Number(minIncrement || 5000),
         isClosed
     };
 
@@ -82,7 +86,7 @@ export const AuctionRoom = ({
                         <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400">Sala en Tiempo Real</span>
                         <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 flex-wrap">
                             Subasta #{auctionId}
-                            <span className="text-slate-400 font-medium text-lg">- {getRoomItemTitle()}</span>
+                            <span className="text-slate-400 font-medium text-lg">- {auctionTitle}</span>
                         </h2>
                     </div>
 
@@ -115,7 +119,7 @@ export const AuctionRoom = ({
                                 }`}
                             ></span>
                             {connectionStatus === 'connected'
-                                ? 'Socket Conectado'
+                                ? 'SignalR Conectado'
                                 : connectionStatus === 'connecting'
                                     ? 'Conectando...'
                                     : 'Offline'}
@@ -156,7 +160,10 @@ export const AuctionRoom = ({
                     auctionId={auctionId}
                     onIncomingBid={handleIncomingBid}
                     onExtend={() => handleTimeExtended(auctionId, null, 'Puja en zona crítica')}
-                    onSimulateError={simulateNetworkRequest}
+                    onSimulateError={(type) => {
+                        if (type === '409') addToast('HTTP 409 Conflict: Colisión concurrente.', 'error');
+                        if (type === '422') addToast('HTTP 422: Saldo insuficiente.', 'error');
+                    }}
                 />
             </div>
         </div>

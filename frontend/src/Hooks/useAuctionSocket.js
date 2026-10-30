@@ -1,28 +1,21 @@
 /* cSpell:disable */
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useToast } from '../Context/ToastContext';
+import { useState, useEffect, useCallback } from 'react';
+import { createAuctionHubConnection } from '../Services/AuctionHub.js';
+import { useToast } from '../Context/ToastContext.jsx';
 
 export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiSnipingExtend, onBidSuccess) => {
     const { addToast } = useToast();
     const [currentPrice, setCurrentPrice] = useState(Number(initialPrice || 0));
     const [connectionStatus, setConnectionStatus] = useState('connecting');
     const [leadershipStatus, setLeadershipStatus] = useState('neutral');
-    const [bidsHistory, setBidsHistory] = useState([
-        {
-            id: 1,
-            amount: initialPrice,
-            bidderUsername: 'Usuario_Inicial',
-            bidderId: 'other-user',
-            timestamp: new Date().toLocaleTimeString()
-        }
-    ]);
+    const [bidsHistory, setBidsHistory] = useState([]);
     const [isSimulatingNetwork, setIsSimulatingNetwork] = useState(false);
 
     const handleIncomingBid = useCallback((auctionIdReceived, amount, bidderUsername, timestamp, bidderId = null) => {
         if (Number(auctionIdReceived) !== Number(auctionId)) return;
 
-        setCurrentPrice(amount);
-        const isCurrentBidMine = bidderId ? bidderId === currentUserId : bidderUsername === currentUserId;
+        setCurrentPrice(Number(amount));
+        const isCurrentBidMine = bidderId ? Number(bidderId) === Number(currentUserId) : bidderUsername === currentUserId;
 
         setLeadershipStatus((prevStatus) => {
             if (isCurrentBidMine) {
@@ -33,13 +26,13 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
                 addToast(`¡Alerta! Tu oferta fue superada por ${bidderUsername}.`, 'error');
                 return 'outbid';
             }
-            return prevStatus;
+            return 'outbid';
         });
 
         setBidsHistory((prev) => [
             {
                 id: Date.now(),
-                amount,
+                amount: Number(amount),
                 bidderUsername,
                 bidderId: bidderId || bidderUsername,
                 timestamp: new Date(timestamp).toLocaleTimeString()
@@ -50,7 +43,7 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
 
     const handleTimeExtended = useCallback((auctionIdReceived, newEndDate, reason) => {
         if (Number(auctionIdReceived) !== Number(auctionId)) return;
-        if (onAntiSnipingExtend) onAntiSnipingExtend();
+        if (onAntiSnipingExtend) onAntiSnipingExtend(newEndDate);
         addToast(`⏳ Anti-Sniping activado: Subasta extendida +2 minutos (${reason || 'Oferta en último minuto'}).`, 'warning', 6000);
     }, [auctionId, onAntiSnipingExtend, addToast]);
 
@@ -74,60 +67,39 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
             });
 
             if (response.ok) {
-                handleIncomingBid(auctionId, amount, 'TÚ', new Date().toISOString(), currentUserId);
                 addToast(`¡Puja enviada con éxito por $${Number(amount).toLocaleString()}!`, 'success');
-
                 if (onBidSuccess) {
                     onBidSuccess();
                 }
             } else if (response.status === 409) {
                 addToast('HTTP 409 Conflict: Oferta rechazada por concurrencia (bloqueo optimista).', 'error');
             } else if (response.status === 400 || response.status === 422) {
-                addToast('Error de validación: Saldo insuficiente o monto menor al incremento.', 'warning');
+                const errorData = await response.json().catch(() => null);
+                addToast(errorData?.detail || 'Error de validación: Saldo insuficiente o incremento no alcanzado.', 'warning');
             } else {
                 addToast('Error al procesar la oferta en el servidor.', 'error');
             }
         } catch (error) {
             console.error("Fallo de red en la puja:", error);
-            addToast('Error de red. No se pudo conectar con el microservicio de Java.', 'error');
+            addToast('Error de red al conectar con el servidor transaccional.', 'error');
         } finally {
             setIsSimulatingNetwork(false);
         }
     };
 
-    const socketRef = useRef(null);
-
     useEffect(() => {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/auction/${auctionId}`;
-
-        const ws = new WebSocket(wsUrl);
-        socketRef.current = ws;
-
-        ws.onopen = () => {
-            setConnectionStatus('connected');
+        const handlers = {
+            onNewBid: handleIncomingBid,
+            onTimeExtended: handleTimeExtended,
+            onAuctionClosed: handleAuctionClosed
         };
 
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'BID') {
-                    handleIncomingBid(data.auctionId, data.amount, data.bidderUsername, data.timestamp, data.bidderId);
-                } else if (data.type === 'EXTENDED') {
-                    handleTimeExtended(data.auctionId, data.newEndDate, data.reason);
-                } else if (data.type === 'CLOSED') {
-                    handleAuctionClosed(data.auctionId, data.winnerUsername, data.finalAmount);
-                }
-            } catch (err) {
-                console.error("Error parseando mensaje WebSocket:", err);
-            }
-        };
-
-        ws.onerror = () => setConnectionStatus('offline');
-        ws.onclose = () => setConnectionStatus('offline');
+        const connection = createAuctionHubConnection(auctionId, handlers, setConnectionStatus);
 
         return () => {
-            if (ws) ws.close();
+            if (connection) {
+                connection.stop().catch(() => {});
+            }
         };
     }, [auctionId, handleIncomingBid, handleTimeExtended, handleAuctionClosed]);
 
