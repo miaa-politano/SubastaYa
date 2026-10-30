@@ -40,15 +40,23 @@ namespace SubastaYa.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("CURRENT_PRICE");
 
+                    b.Property<int?>("CurrentWinnerId")
+                        .HasColumnType("integer")
+                        .HasColumnName("CURRENT_WINNER_ID");
+
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
+                        .HasColumnType("text")
                         .HasColumnName("DESCRIPTION");
 
                     b.Property<DateTime>("EndDateUtc")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("END_DATE");
+                        .HasColumnName("END_DATE_UTC");
+
+                    b.Property<decimal>("MinIncrement")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("MIN_INCREMENT");
 
                     b.Property<int>("SellerId")
                         .HasColumnType("integer")
@@ -56,7 +64,7 @@ namespace SubastaYa.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("StartDateUtc")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("START_DATE");
+                        .HasColumnName("START_DATE_UTC");
 
                     b.Property<decimal>("StartingPrice")
                         .HasPrecision(18, 2)
@@ -71,8 +79,8 @@ namespace SubastaYa.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("TITLE");
 
                     b.Property<uint>("Version")
@@ -84,6 +92,8 @@ namespace SubastaYa.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("CurrentWinnerId");
 
                     b.HasIndex("SellerId");
 
@@ -317,6 +327,10 @@ namespace SubastaYa.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SubastaYa.Domain.Entities.User", "CurrentWinner")
+                        .WithMany()
+                        .HasForeignKey("CurrentWinnerId");
+
                     b.HasOne("SubastaYa.Domain.Entities.User", "Seller")
                         .WithMany()
                         .HasForeignKey("SellerId")
@@ -324,6 +338,8 @@ namespace SubastaYa.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+
+                    b.Navigation("CurrentWinner");
 
                     b.Navigation("Seller");
                 });

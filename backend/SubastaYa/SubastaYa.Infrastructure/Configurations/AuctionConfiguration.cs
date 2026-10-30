@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SubastaYa.Domain.Entities;
 
@@ -14,17 +14,19 @@ public class AuctionConfiguration : IEntityTypeConfiguration<Auction>
         builder.Property(a => a.Id).HasColumnName("ID");
         builder.Property(a => a.SellerId).HasColumnName("SELLER_ID").IsRequired();
         builder.Property(a => a.CategoryId).HasColumnName("CATEGORY_ID").IsRequired();
-        builder.Property(a => a.Title).HasColumnName("TITLE").HasMaxLength(200).IsRequired();
-        builder.Property(a => a.Description).HasColumnName("DESCRIPTION").HasMaxLength(1000);
+        builder.Property(a => a.CurrentWinnerId).HasColumnName("CURRENT_WINNER_ID");
+        builder.Property(a => a.Title).HasColumnName("TITLE").HasMaxLength(255).IsRequired();
+        builder.Property(a => a.Description).HasColumnName("DESCRIPTION");
         builder.Property(a => a.StartingPrice).HasColumnName("STARTING_PRICE").HasPrecision(18, 2).IsRequired();
         builder.Property(a => a.CurrentPrice).HasColumnName("CURRENT_PRICE").HasPrecision(18, 2).IsRequired();
-        builder.Property(a => a.StartDateUtc).HasColumnName("START_DATE").IsRequired();
-        builder.Property(a => a.EndDateUtc).HasColumnName("END_DATE").IsRequired();
+        builder.Property(a => a.MinIncrement).HasColumnName("MIN_INCREMENT").HasPrecision(18, 2).IsRequired();
+        builder.Property(a => a.StartDateUtc).HasColumnName("START_DATE_UTC").IsRequired();
+        builder.Property(a => a.EndDateUtc).HasColumnName("END_DATE_UTC").IsRequired();
         builder.Property(a => a.Status).HasColumnName("STATUS").HasMaxLength(50).IsRequired();
 
         builder.Property(a => a.Version)
             .HasColumnName("VERSION")
-            .IsRowVersion();
+            .IsConcurrencyToken();
 
         builder.HasOne(a => a.Seller)
             .WithMany()
