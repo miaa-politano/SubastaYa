@@ -1,6 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SubastaYa.Domain.Entities;
-using SubastaYa.Domain.Exceptions;
 using SubastaYa.Domain.Interfaces;
 using SubastaYa.Infrastructure.Persistence;
 
@@ -42,16 +41,7 @@ public class WalletService : IWalletService
         };
 
         _context.TransactionLedgers.Add(ledgerEntry);
-
-        try
-        {
-            await _context.SaveChangesAsync(cancellationToken);
-            return true;
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            throw new InvalidOperationException("Concurrent wallet modification detected. Please retry the operation.");
-        }
+        return true;
     }
 
     public async Task<bool> UnlockFundsAsync(int userId, decimal amount, string referenceType, int referenceId, CancellationToken cancellationToken = default)
@@ -70,16 +60,7 @@ public class WalletService : IWalletService
         };
 
         _context.TransactionLedgers.Add(ledgerEntry);
-
-        try
-        {
-            await _context.SaveChangesAsync(cancellationToken);
-            return true;
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            throw new InvalidOperationException("Concurrent wallet modification detected. Please retry the operation.");
-        }
+        return true;
     }
 
     public async Task<bool> DebitLockedFundsAsync(int userId, decimal amount, string referenceType, int referenceId, CancellationToken cancellationToken = default)

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using SubastaYa.Domain.Exceptions;
 
@@ -42,7 +42,7 @@ public class Auction
     public DateTime EndDateUtc { get; set; }
 
     [Column("STATUS")]
-    public string Status { get; set; } = "Active";
+    public string Status { get; set; } = "ACTIVAS";
 
     [ConcurrencyCheck]
     [Column("VERSION")]
@@ -65,7 +65,10 @@ public class Auction
 
     public void ValidateBidEligibility(int bidderId, decimal amount)
     {
-        if (Status != "Active" || DateTime.UtcNow > EndDateUtc)
+        var isActive = string.Equals(Status, "ACTIVAS", StringComparison.OrdinalIgnoreCase) ||
+                       string.Equals(Status, "Active", StringComparison.OrdinalIgnoreCase);
+
+        if (!isActive || DateTime.UtcNow > EndDateUtc)
         {
             throw new InvalidOperationException("Auction is not active.");
         }
