@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SubastaYa.Domain.Entities;
 
@@ -19,6 +19,6 @@ public class WalletConfiguration : IEntityTypeConfiguration<Wallet>
 
         builder.Property(w => w.Version)
             .HasColumnName("VERSION")
-            .IsRowVersion();
+            .IsConcurrencyToken();
     }
 }
