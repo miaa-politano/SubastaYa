@@ -83,6 +83,10 @@ CREATE TABLE "OUTBOX_EVENT" (
 
 CREATE INDEX "IX_OUTBOX_EVENT_PENDING" ON "OUTBOX_EVENT" ("STATUS", "CREATED_AT_UTC");
 
+  GRANT SELECT ON ALL TABLES IN SCHEMA public TO subastaya_dotnet;
+  GRANT SELECT, UPDATE ("STATUS", "PROCESSED_AT_UTC", "PROCESSING_AT_UTC", "RETRY_COUNT", "LAST_ERROR")
+      ON "OUTBOX_EVENT" TO subastaya_dotnet;
+
 -- 2. DATOS SEMILLA EXIGIDOS POR LA CÁTEDRA
 INSERT INTO "USER" ("ID", "USERNAME", "EMAIL", "PASSWORD_HASH") VALUES
                                                                     (1, 'vendedor', 'vendedor@test.com', 'hash_mock_vendedor'),
