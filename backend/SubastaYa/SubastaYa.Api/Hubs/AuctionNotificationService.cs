@@ -32,4 +32,18 @@ public class AuctionNotificationService : IAuctionNotificationService
             .Group($"Auction_{auctionId}")
             .AuctionClosed(auctionId, winnerUsername, finalAmount);
     }
+
+    public async Task NotifyOutbidAsync(int auctionId, int outbidUserId, int newBidderId, decimal newAmount, DateTime timestamp)
+    {
+        await _hubContext.Clients
+            .Group($"Auction_{auctionId}")
+            .OutbidNotification(auctionId, outbidUserId, newBidderId, newAmount, timestamp);
+    }
+
+    public async Task NotifyWalletBalanceChangedAsync(int userId, decimal totalBalance, decimal lockedBalance, decimal availableBalance, string reason)
+    {
+        await _hubContext.Clients
+            .Group($"User_{userId}")
+            .WalletBalanceChanged(userId, totalBalance, lockedBalance, availableBalance, reason);
+    }
 }

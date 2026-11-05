@@ -103,14 +103,14 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
             onAuctionClosed: handleAuctionClosed
         };
 
-        const connection = createAuctionHubConnection(auctionId, handlers, setConnectionStatus);
+        const connection = createAuctionHubConnection(auctionId, handlers, setConnectionStatus, currentUserId);
 
         return () => {
             if (connection) {
                 connection.stop().catch(() => {});
             }
         };
-    }, [auctionId, handleIncomingBid, handleTimeExtended, handleAuctionClosed]);
+    }, [auctionId, currentUserId, handleIncomingBid, handleTimeExtended, handleAuctionClosed]);
 
     return {
         currentPrice,

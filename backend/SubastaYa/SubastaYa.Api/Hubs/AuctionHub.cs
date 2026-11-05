@@ -14,4 +14,14 @@ public class AuctionHub : Hub<IAuctionHubClient>
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Auction_{auctionId}");
     }
+
+    public async Task JoinUserGroup(string userId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"User_{userId}");
+    }
+
+    public async Task LeaveUserGroup(string userId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"User_{userId}");
+    }
 }

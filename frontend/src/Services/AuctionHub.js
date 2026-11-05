@@ -1,6 +1,6 @@
 ﻿import * as signalR from '@microsoft/signalr';
 
-export const createAuctionHubConnection = (auctionId, handlers = {}, onStatusChange) => {
+export const createAuctionHubConnection = (auctionId, handlers = {}, onStatusChange, userId = null) => {
     const connection = new signalR.HubConnectionBuilder()
         .withUrl('/hubs/auction')
         .withAutomaticReconnect([0, 2000, 5000, 10000])
@@ -19,13 +19,28 @@ export const createAuctionHubConnection = (auctionId, handlers = {}, onStatusCha
         connection.on('AuctionClosed', handlers.onAuctionClosed);
     }
 
+    if (handlers.onOutbid) {
+        connection.on('OutbidNotification', handlers.onOutbid);
+    }
+
+    if (handlers.onWalletBalanceChanged) {
+        connection.on('WalletBalanceChanged', handlers.onWalletBalanceChanged);
+    }
+
+    const joinGroups = async () => {
+        await connection.invoke('JoinAuctionGroup', String(auctionId));
+        if (userId !== null && userId !== undefined) {
+            await connection.invoke('JoinUserGroup', String(userId));
+        }
+    };
+
     connection.onreconnecting(() => {
         if (onStatusChange) onStatusChange('reconnecting');
     });
 
     connection.onreconnected(() => {
         if (onStatusChange) onStatusChange('connected');
-        connection.invoke('JoinAuctionGroup', String(auctionId)).catch(() => {});
+        joinGroups().catch(() => {});
     });
 
     connection.onclose(() => {
@@ -36,7 +51,7 @@ export const createAuctionHubConnection = (auctionId, handlers = {}, onStatusCha
         .start()
         .then(async () => {
             if (onStatusChange) onStatusChange('connected');
-            await connection.invoke('JoinAuctionGroup', String(auctionId));
+            await joinGroups();
         })
         .catch(() => {
             if (onStatusChange) onStatusChange('disconnected');

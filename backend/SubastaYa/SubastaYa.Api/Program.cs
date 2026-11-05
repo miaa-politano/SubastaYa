@@ -33,7 +33,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IBidService, BidService>();
 builder.Services.AddScoped<IAuctionNotificationService, AuctionNotificationService>();
-builder.Services.AddScoped<IOutboxEventHandler, OutboxEventHandler>();
+builder.Services.AddScoped<IOutboxEventHandler, OutboxEventPublisher>();
 builder.Services.AddHostedService<OutboxEventConsumer>();
 
 var app = builder.Build();
