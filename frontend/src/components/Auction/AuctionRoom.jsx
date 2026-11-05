@@ -1,4 +1,3 @@
-/* cSpell:disable */
 import { useState, useEffect } from 'react';
 import { useToast } from '../../Context/ToastContext.jsx';
 import { useAuctionSocket } from '../../Hooks/useAuctionSocket.js';
@@ -14,7 +13,8 @@ export const AuctionRoom = ({
                                 initialPrice = 1450000,
                                 currentUserId,
                                 walletBalance,
-                                onRefreshBalance
+                                onRefreshBalance,
+                                onBidSubmit
                             }) => {
     const { addToast } = useToast();
     const [timeLeft, setTimeLeft] = useState(75);
@@ -57,10 +57,11 @@ export const AuctionRoom = ({
     };
 
     const isClosed = timeLeft <= 0;
+    const submitBid = onBidSubmit || handleBidSubmit;
 
     const auctionData = {
         currentPrice: currentPrice,
-        minIncrement: auctionId === 2 ? 2000 : 5000, // Usa los $5.000 del seed para la Subasta #1 y $2.000 para la #2
+        minIncrement: auctionId === 2 ? 2000 : 5000,
         isClosed
     };
 
@@ -133,7 +134,7 @@ export const AuctionRoom = ({
                         <AuctionPriceDisplay currentPrice={currentPrice} />
                         <BiddingConsole
                             auction={auctionData}
-                            onBidSubmit={handleBidSubmit}
+                            onBidSubmit={submitBid}
                             walletBalance={walletBalance}
                         />
                     </div>

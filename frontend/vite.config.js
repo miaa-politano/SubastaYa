@@ -9,6 +9,12 @@ export default defineConfig({
   ],
   server: {
     proxy: {
+      '/hubs': {
+        target: 'http://localhost:5273',
+        changeOrigin: true,
+        ws: true,
+        secure: false
+      },
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
