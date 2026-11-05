@@ -134,6 +134,20 @@ public class WalletServiceImpl implements WalletService {
             refundLog.setDescription("Refund due to outbid in auction ID: " + auctionId);
             refundLog.setCreatedAtUtc(nowUtc);
             transactionLedgerRepository.save(refundLog);
+
+            outboxEventService.enqueue(
+                    "WalletBalanceChanged",
+                    "WALLET",
+                    previousWinnerWallet.getId(),
+                    Map.of(
+                            "userId", previousWinnerWallet.getUserId(),
+                            "totalBalance", previousWinnerWallet.getTotalBalance(),
+                            "lockedBalance", previousWinnerWallet.getLockedBalance(),
+                            "availableBalance", previousWinnerWallet.getAvailableBalance(),
+                            "reason", "OUTBID_REFUND",
+                            "auctionId", auctionId
+                    )
+            );
         }
 
         Wallet newBidderWallet = walletRepository.findByUserId(newBidderId)
@@ -154,5 +168,19 @@ public class WalletServiceImpl implements WalletService {
         lockLog.setDescription("Escrow retention for leading bid in auction ID: " + auctionId);
         lockLog.setCreatedAtUtc(nowUtc);
         transactionLedgerRepository.save(lockLog);
+
+        outboxEventService.enqueue(
+                "WalletBalanceChanged",
+                "WALLET",
+                newBidderWallet.getId(),
+                Map.of(
+                        "userId", newBidderWallet.getUserId(),
+                        "totalBalance", newBidderWallet.getTotalBalance(),
+                        "lockedBalance", newBidderWallet.getLockedBalance(),
+                        "availableBalance", newBidderWallet.getAvailableBalance(),
+                        "reason", "BID_LOCK",
+                        "auctionId", auctionId
+                )
+        );
     }
 }

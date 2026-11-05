@@ -5,6 +5,7 @@ import org.example.domain.entities.Auction;
 import org.example.domain.repositories.AuctionRepository;
 import org.example.service.AuctionService;
 import org.example.service.AuditService;
+import org.example.service.OutboxEventService;
 import org.example.service.WalletService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,8 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class AuctionServiceImpl implements AuctionService {
@@ -21,11 +24,17 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionRepository auctionRepository;
     private final WalletService walletService;
     private final AuditService auditService;
+    private final OutboxEventService outboxEventService;
 
-    public AuctionServiceImpl(AuctionRepository auctionRepository, WalletService walletService, AuditService auditService) {
+    public AuctionServiceImpl(
+            AuctionRepository auctionRepository,
+            WalletService walletService,
+            AuditService auditService,
+            OutboxEventService outboxEventService) {
         this.auctionRepository = auctionRepository;
         this.walletService = walletService;
         this.auditService = auditService;
+        this.outboxEventService = outboxEventService;
     }
 
     @Override
@@ -82,12 +91,42 @@ public class AuctionServiceImpl implements AuctionService {
         auction.setCurrentPrice(amount);
 
         long secondsLeft = Duration.between(nowUtc, auction.getEndDateUtc()).toSeconds();
+        boolean wasExtended = false;
         if (secondsLeft <= 60) {
             auction.setEndDateUtc(auction.getEndDateUtc().plusMinutes(2));
+            wasExtended = true;
             auditService.logTimeExtension(auctionId, 2, "Anti-sniping triggered.");
         }
 
-        return auctionRepository.saveAndFlush(auction);
+        Auction savedAuction = auctionRepository.saveAndFlush(auction);
+
+        Map<String, Object> bidPayload = new HashMap<>();
+        bidPayload.put("auctionId", savedAuction.getId());
+        bidPayload.put("bidderId", bidderId);
+        bidPayload.put("amount", amount);
+        bidPayload.put("previousWinnerId", previousWinnerId);
+        bidPayload.put("occurredAtUtc", nowUtc.toString());
+        outboxEventService.enqueue("AuctionBidPlaced", "AUCTION", savedAuction.getId(), bidPayload);
+
+        if (previousWinnerId != null) {
+            Map<String, Object> outbidPayload = new HashMap<>();
+            outbidPayload.put("auctionId", savedAuction.getId());
+            outbidPayload.put("outbidUserId", previousWinnerId);
+            outbidPayload.put("newBidderId", bidderId);
+            outbidPayload.put("newAmount", amount);
+            outbidPayload.put("occurredAtUtc", nowUtc.toString());
+            outboxEventService.enqueue("OutbidNotification", "AUCTION", savedAuction.getId(), outbidPayload);
+        }
+
+        if (wasExtended) {
+            Map<String, Object> extensionPayload = new HashMap<>();
+            extensionPayload.put("auctionId", savedAuction.getId());
+            extensionPayload.put("newEndDateUtc", savedAuction.getEndDateUtc().toString());
+            extensionPayload.put("reason", "ANTI_SNIPING");
+            outboxEventService.enqueue("AuctionTimeExtended", "AUCTION", savedAuction.getId(), extensionPayload);
+        }
+
+        return savedAuction;
     }
 
     @Override
