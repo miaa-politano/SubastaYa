@@ -5,7 +5,6 @@ using SubastaYa.Api.Hubs;
 using SubastaYa.Api.Middlewares;
 using SubastaYa.Domain.Interfaces;
 using SubastaYa.Infrastructure.Persistence;
-using SubastaYa.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,8 +29,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
 });
 
-builder.Services.AddScoped<IWalletService, WalletService>();
-builder.Services.AddScoped<IBidService, BidService>();
 builder.Services.AddScoped<IAuctionNotificationService, AuctionNotificationService>();
 builder.Services.AddScoped<IOutboxEventHandler, OutboxEventPublisher>();
 builder.Services.AddHostedService<OutboxEventConsumer>();
