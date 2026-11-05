@@ -32,6 +32,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IAuctionNotificationService, AuctionNotificationService>();
 builder.Services.AddScoped<IOutboxEventHandler, OutboxEventPublisher>();
 builder.Services.AddHostedService<OutboxEventConsumer>();
+builder.Services.AddHostedService<OutboxEventSignalListener>();
 
 var app = builder.Build();
 

@@ -7,6 +7,7 @@ import org.example.domain.repositories.OutboxEventRepository;
 import org.example.service.OutboxEventService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -16,10 +17,15 @@ public class OutboxEventServiceImpl implements OutboxEventService {
 
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final EntityManager entityManager;
 
-    public OutboxEventServiceImpl(OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper) {
+    public OutboxEventServiceImpl(
+            OutboxEventRepository outboxEventRepository,
+            ObjectMapper objectMapper,
+            EntityManager entityManager) {
         this.outboxEventRepository = outboxEventRepository;
         this.objectMapper = objectMapper;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -34,7 +40,11 @@ public class OutboxEventServiceImpl implements OutboxEventService {
             event.setCreatedAtUtc(LocalDateTime.now(Clock.systemUTC()));
             event.setStatus("PENDING");
             event.setRetryCount(0);
-            return outboxEventRepository.save(event);
+            OutboxEvent savedEvent = outboxEventRepository.save(event);
+            entityManager.createNativeQuery("SELECT pg_notify('subastaya_outbox', :eventId)")
+                    .setParameter("eventId", String.valueOf(savedEvent.getId()))
+                    .getSingleResult();
+            return savedEvent;
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize outbox event payload.", exception);
         }
