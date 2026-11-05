@@ -75,6 +75,7 @@ CREATE TABLE "OUTBOX_EVENT" (
                                "PAYLOAD" TEXT NOT NULL,
                                "CREATED_AT_UTC" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                "PROCESSED_AT_UTC" TIMESTAMP NULL,
+                                 "PROCESSING_AT_UTC" TIMESTAMP NULL,
                                "STATUS" VARCHAR(20) NOT NULL DEFAULT 'PENDING',
                                "RETRY_COUNT" INT NOT NULL DEFAULT 0,
                                "LAST_ERROR" VARCHAR(1000) NULL

@@ -35,6 +35,9 @@ public class OutboxEvent {
     @Column(name = "PROCESSED_AT_UTC")
     private LocalDateTime processedAtUtc;
 
+    @Column(name = "PROCESSING_AT_UTC")
+    private LocalDateTime processingAtUtc;
+
     @Column(name = "STATUS", nullable = false, length = 20)
     private String status;
 
@@ -58,6 +61,8 @@ public class OutboxEvent {
     public void setCreatedAtUtc(LocalDateTime createdAtUtc) { this.createdAtUtc = createdAtUtc; }
     public LocalDateTime getProcessedAtUtc() { return processedAtUtc; }
     public void setProcessedAtUtc(LocalDateTime processedAtUtc) { this.processedAtUtc = processedAtUtc; }
+    public LocalDateTime getProcessingAtUtc() { return processingAtUtc; }
+    public void setProcessingAtUtc(LocalDateTime processingAtUtc) { this.processingAtUtc = processingAtUtc; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public Integer getRetryCount() { return retryCount; }
