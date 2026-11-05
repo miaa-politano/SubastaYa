@@ -22,7 +22,7 @@ public sealed class OutboxEventPublisher : IOutboxEventHandler
                 await _notificationService.NotifyNewBidAsync(
                     payload.GetProperty("auctionId").GetInt32(),
                     payload.GetProperty("amount").GetDecimal(),
-                    payload.GetProperty("bidderId").GetInt32().ToString(),
+                    payload.GetProperty("bidderId").GetInt32(),
                     payload.GetProperty("occurredAtUtc").GetDateTime());
                 break;
             case "AuctionTimeExtended":

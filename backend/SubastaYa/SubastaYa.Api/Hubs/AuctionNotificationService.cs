@@ -12,11 +12,11 @@ public class AuctionNotificationService : IAuctionNotificationService
         _hubContext = hubContext;
     }
 
-    public async Task NotifyNewBidAsync(int auctionId, decimal newAmount, string bidderUsername, DateTime timestamp)
+    public async Task NotifyNewBidAsync(int auctionId, decimal newAmount, int bidderId, DateTime timestamp)
     {
         await _hubContext.Clients
             .Group($"Auction_{auctionId}")
-            .ReceiveNewBid(auctionId, newAmount, bidderUsername, timestamp);
+            .ReceiveNewBid(auctionId, newAmount, bidderId.ToString(), timestamp, bidderId);
     }
 
     public async Task NotifyTimeExtendedAsync(int auctionId, DateTime newEndDate, string reason)
