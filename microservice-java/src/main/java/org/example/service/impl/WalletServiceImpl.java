@@ -7,21 +7,28 @@ import org.example.domain.entities.TransactionLedger;
 import org.example.domain.repositories.WalletRepository;
 import org.example.domain.repositories.TransactionLedgerRepository;
 import org.example.service.WalletService;
+import org.example.service.OutboxEventService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Service
 public class WalletServiceImpl implements WalletService {
 
     private final WalletRepository walletRepository;
     private final TransactionLedgerRepository transactionLedgerRepository;
+    private final OutboxEventService outboxEventService;
 
-    public WalletServiceImpl(WalletRepository walletRepository, TransactionLedgerRepository transactionLedgerRepository) {
+    public WalletServiceImpl(
+            WalletRepository walletRepository,
+            TransactionLedgerRepository transactionLedgerRepository,
+            OutboxEventService outboxEventService) {
         this.walletRepository = walletRepository;
         this.transactionLedgerRepository = transactionLedgerRepository;
+        this.outboxEventService = outboxEventService;
     }
 
     @Override
@@ -53,6 +60,19 @@ public class WalletServiceImpl implements WalletService {
         ledger.setDescription("User financial fund deposit injection");
         ledger.setCreatedAtUtc(LocalDateTime.now(Clock.systemUTC()));
         transactionLedgerRepository.save(ledger);
+
+        outboxEventService.enqueue(
+                "WalletBalanceChanged",
+                "WALLET",
+                wallet.getId(),
+                Map.of(
+                        "userId", wallet.getUserId(),
+                        "totalBalance", wallet.getTotalBalance(),
+                        "lockedBalance", wallet.getLockedBalance(),
+                        "availableBalance", wallet.getAvailableBalance(),
+                        "reason", "DEPOSIT"
+                )
+        );
     }
 
     @Override
