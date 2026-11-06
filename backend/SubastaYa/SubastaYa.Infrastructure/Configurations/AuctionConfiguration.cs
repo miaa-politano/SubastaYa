@@ -26,6 +26,8 @@ public class AuctionConfiguration : IEntityTypeConfiguration<Auction>
 
         builder.Property(a => a.Version)
             .HasColumnName("VERSION")
+            .HasColumnType("bigint")
+            .HasConversion<long>()
             .IsConcurrencyToken();
 
         builder.HasOne(a => a.Seller)

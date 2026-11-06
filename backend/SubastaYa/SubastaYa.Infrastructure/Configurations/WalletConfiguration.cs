@@ -19,6 +19,8 @@ public class WalletConfiguration : IEntityTypeConfiguration<Wallet>
 
         builder.Property(w => w.Version)
             .HasColumnName("VERSION")
+            .HasColumnType("bigint")
+            .HasConversion<long>()
             .IsConcurrencyToken();
     }
 }

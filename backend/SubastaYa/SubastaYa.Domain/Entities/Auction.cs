@@ -1,6 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using SubastaYa.Domain.Exceptions;
 
 namespace SubastaYa.Domain.Entities;
 
@@ -61,36 +60,5 @@ public class Auction
         }
 
         return CurrentPrice + MinIncrement;
-    }
-
-    public void ValidateBidEligibility(int bidderId, decimal amount)
-    {
-        if (Status != "Active" || DateTime.UtcNow > EndDateUtc)
-        {
-            throw new InvalidOperationException("Auction is not active.");
-        }
-
-        if (SellerId == bidderId)
-        {
-            throw new InvalidOperationException("Seller cannot bid on their own auction.");
-        }
-
-        if (CurrentWinnerId == bidderId)
-        {
-            throw new InvalidOperationException("You already hold the highest bid.");
-        }
-
-        var minRequired = GetNextSuggestedBidAmount();
-        if (amount < minRequired)
-        {
-            throw new InvalidBidAmountException(Id, amount, minRequired);
-        }
-    }
-
-    public void ApplyNewWinningBid(int bidderId, decimal amount)
-    {
-        ValidateBidEligibility(bidderId, amount);
-        CurrentPrice = amount;
-        CurrentWinnerId = bidderId;
     }
 }

@@ -83,10 +83,9 @@ namespace SubastaYa.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("TITLE");
 
-                    b.Property<uint>("Version")
+                    b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
+                        .HasColumnType("bigint")
                         .HasColumnName("VERSION");
 
                     b.HasKey("Id");
@@ -305,10 +304,9 @@ namespace SubastaYa.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("USER_ID");
 
-                    b.Property<uint>("Version")
+                    b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
+                        .HasColumnType("bigint")
                         .HasColumnName("VERSION");
 
                     b.HasKey("Id");

@@ -6,7 +6,8 @@ target/
 .idea/
 .vscode/
 *.env
-.contexto/
+.contexto/*
+!.contexto/deuda_tecnica_fase1.md
 # Archivos de base de datos locales
 *.db
 *.local
