@@ -1,72 +1,25 @@
-# Deuda técnica - Fase 1
+# Deuda técnica - Fase 1 y relay C#
 
 Fecha: 2026-11-06
 Rama: `feature/csharp-signalr-relay`
 
-## Estado de la fase
+## Estado resuelto
 
-La configuración inicial de .NET, Entity Framework Core y concurrencia optimista quedó alineada a nivel de modelo:
-
-- `Auction.Version` y `Wallet.Version` conservan el tipo de dominio `uint`.
-- PostgreSQL utiliza `bigint` mediante conversión explícita.
-- `Auction` y `Wallet` utilizan `IsConcurrencyToken()`.
-- El snapshot de EF Core coincide con las configuraciones actuales.
-- `has-pending-model-changes` finaliza correctamente.
-- La solución compila sin errores.
+- `Auction.Version` y `Wallet.Version` conservan `uint` en el dominio.
+- PostgreSQL usa `bigint` con `.HasConversion<long>()` y ambas propiedades son tokens de concurrencia.
+- El snapshot de EF Core coincide con las configuraciones y no hay cambios de modelo pendientes.
+- Se eliminó el endpoint mock duplicado de pujas.
+- Se agregó el endpoint interno autenticado, relay idempotente y publicación SignalR por grupo.
 
 ## Pendientes técnicos
 
-### 1. Duplicación de endpoints de pujas
+- La deduplicación actual usa `IEventDeduplicator` con una implementación en memoria por instancia. Evita un `HashSet` estático local y funciona para una única instancia, pero debe reemplazarse por Redis o una tabla con índice único antes de escalar horizontalmente.
+- Java todavía debe enviar `eventId` y el header `X-Internal-Api-Key` al endpoint C#. El contrato C# acepta el UUID y rechaza eventos sin él; no se modificó Java para completar esa integración.
+- Los saldos recibidos en eventos son informativos: C# los retransmite conceptualmente como parte del contrato, no los recalcula ni persiste. Java continúa siendo dueño de la lógica de negocio.
+- El compose disponible en esta rama sólo define PostgreSQL. No se agregaron servicios ni redes adicionales porque el repositorio no contiene Dockerfiles para Java o C#; la comunicación de negocio se realiza mediante endpoints HTTP.
+- El contrato SignalR conserva `ReceiveNewBid`, `AuctionTimeExtended` y `AuctionClosed` porque son los nombres consumidos por el frontend existente. La migración futura a nombres `ReceiveTimeExtended`/`ReceiveAuctionClosed` requiere coordinación con React y está fuera del alcance de Mateo.
+- No hay proyectos de pruebas automatizadas en la solución. La compilación, `dotnet test` y la validación de migraciones fueron ejecutadas; las pruebas HTTP locales quedaron limitadas por la ausencia del certificado HTTPS de desarrollo y permisos del proveedor EventLog.
 
-Actualmente existen dos rutas equivalentes para registrar pujas:
+## Integración políglota pendiente
 
-- `AuctionsController`: endpoint mock `POST /api/auctions/{id}/bids`.
-- `BidsController`: endpoint real `POST /api/auctions/{auctionId}/bids`.
-
-Debe eliminarse el endpoint mock cuando el flujo de pujas pase definitivamente a Java.
-
-### 2. Migración de reglas de negocio a Java
-
-Al eliminar `ValidateBidEligibility` y `ApplyNewWinningBid`, el backend C# dejó de validar localmente:
-
-- Estado de la subasta.
-- Incremento mínimo.
-- Autooferta del vendedor.
-- Repetición de puja por parte del líder actual.
-
-Estas reglas deben quedar implementadas y validadas en Java antes de retirar el flujo C# actual.
-
-### 3. Respuesta HTTP de conflictos de billetera
-
-`WalletService` captura `DbUpdateConcurrencyException` y la transforma en `InvalidOperationException`. Debe revisarse el mapeo para que las colisiones de concurrencia lleguen al cliente como `409 Conflict`, según la rúbrica.
-
-### 4. Pruebas automatizadas
-
-La solución no contiene proyectos de pruebas automatizadas. Deben agregarse pruebas para:
-
-- Dos pujas concurrentes sobre la misma subasta.
-- Dos modificaciones concurrentes de una billetera.
-- Rollback completo ante conflictos.
-- Incremento de `Version`.
-- Rechazo de la segunda operación con `409 Conflict`.
-
-### 5. Aplicación de migraciones
-
-La migración `AlignVersionConcurrencyMapping` debe aplicarse y verificarse contra PostgreSQL en un entorno controlado. Es necesario confirmar el estado de `__EFMigrationsHistory` antes de ejecutar `Update-Database`.
-
-### 6. Notificaciones posteriores al commit
-
-Actualmente una notificación que falla después del commit puede propagarse como error HTTP aunque la operación contable ya haya sido confirmada. La Fase 3 debe desacoplar este flujo mediante el relay Java → C# → SignalR.
-
-### 7. Validación de integración políglota
-
-Antes de integrar Java, debe verificarse que:
-
-- Java utilice `Long` para `@Version`.
-- Hibernate mantenga `ddl-auto=validate` sin errores.
-- Las tablas compartidas utilicen `bigint` para `VERSION`.
-- EF Core y Hibernate puedan leer y actualizar el mismo esquema.
-
-## Restricción de alcance
-
-Estos pendientes no forman parte de la implementación actual de la Fase 1, salvo la preparación del mapeo de concurrencia. Deben resolverse en las fases posteriores indicadas por `Orden de proceso.pdf`.
+Antes de producción debe verificarse Java con `Long` para `VERSION`, Hibernate `ddl-auto=validate`, el esquema compartido y el envío de eventos después del commit. No se modificaron Java ni React en esta fase.
