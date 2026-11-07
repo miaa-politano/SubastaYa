@@ -14,6 +14,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Bid> Bids => Set<Bid>();
     public DbSet<TransactionLedger> TransactionLedgers => Set<TransactionLedger>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -4,7 +4,9 @@ import org.example.domain.entities.AuditLog;
 import org.example.domain.repositories.AuditLogRepository;
 import org.example.service.AuditService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Clock;
 import java.time.LocalDateTime;
 
@@ -12,6 +14,7 @@ import java.time.LocalDateTime;
 public class AuditServiceImpl implements AuditService {
 
     private final AuditLogRepository auditLogRepository;
+    private final Clock clock = Clock.systemUTC();
 
     public AuditServiceImpl(AuditLogRepository auditLogRepository) {
         this.auditLogRepository = auditLogRepository;
@@ -19,53 +22,78 @@ public class AuditServiceImpl implements AuditService {
 
     @Override
     @Transactional
-    public void logStateChange(Integer auctionId, String previousState, String newState, String message) {
-        AuditLog log = new AuditLog();
-        log.setAuctionId(auctionId);
-        log.setEventType("STATE_CHANGE");
-        log.setPreviousState(previousState);
-        log.setNewState(newState);
-        log.setMessage(message);
-        log.setCreatedAtUtc(LocalDateTime.now(Clock.systemUTC()));
-        auditLogRepository.save(log);
+    public void logStateChange(
+            Integer auctionId,
+            String previousState,
+            String newState,
+            String message) {
+
+        save(
+                "STATE_CHANGE",
+                "auction:" + auctionId,
+                "previousState=" + previousState
+                        + "; newState=" + newState
+                        + "; message=" + message
+        );
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
-    public void logConcurrencyFailure(Integer auctionId, String userBidding, String message) {
-        AuditLog log = new AuditLog();
-        log.setAuctionId(auctionId);
-        log.setEventType("CONCURRENCY_FAILURE");
-        log.setPreviousState("ACTIVAS");
-        log.setNewState("ACTIVAS");
-        log.setMessage("User: " + userBidding + " - " + message);
-        log.setCreatedAtUtc(LocalDateTime.now(Clock.systemUTC()));
-        auditLogRepository.save(log);
-    }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logConcurrencyFailure(
+            Integer auctionId,
+            String userBidding,
+            String message) {
 
-    @Override
-    @Transactional
-    public void logTimeExtension(Integer auctionId, int extendedMinutes, String message) {
-        AuditLog log = new AuditLog();
-        log.setAuctionId(auctionId);
-        log.setEventType("ANTI_SNIPING_EXTENSION");
-        log.setPreviousState("ACTIVAS");
-        log.setNewState("ACTIVAS");
-        log.setMessage("Extended by " + extendedMinutes + " minutes - " + message);
-        log.setCreatedAtUtc(LocalDateTime.now(Clock.systemUTC()));
-        auditLogRepository.save(log);
+        save(
+                "CONCURRENCY_FAILURE",
+                "user:" + userBidding,
+                "auctionId=" + auctionId
+                        + "; message=" + message
+        );
     }
 
     @Override
     @Transactional
-    public void logRejectedBid(Integer auctionId, String userBidding, String message) {
+    public void logTimeExtension(
+            Integer auctionId,
+            int extendedMinutes,
+            String message) {
+
+        save(
+                "ANTI_SNIPING_EXTENSION",
+                "auction:" + auctionId,
+                "auctionId=" + auctionId
+                        + "; extendedMinutes=" + extendedMinutes
+                        + "; message=" + message
+        );
+    }
+
+    @Override
+    @Transactional
+    public void logRejectedBid(
+            Integer auctionId,
+            String userBidding,
+            String message) {
+
+        save(
+                "BID_REJECTED",
+                "user:" + userBidding,
+                "auctionId=" + auctionId
+                        + "; message=" + message
+        );
+    }
+
+    private void save(
+            String action,
+            String performedBy,
+            String details) {
+
         AuditLog log = new AuditLog();
-        log.setAuctionId(auctionId);
-        log.setEventType("BID_REJECTED");
-        log.setPreviousState("ACTIVAS");
-        log.setNewState("ACTIVAS");
-        log.setMessage("User: " + userBidding + " - " + message);
-        log.setCreatedAtUtc(LocalDateTime.now(Clock.systemUTC()));
+        log.setAction(action);
+        log.setPerformedBy(performedBy);
+        log.setDetails(details);
+        log.setTimestamp(LocalDateTime.now(clock));
+
         auditLogRepository.save(log);
     }
 }

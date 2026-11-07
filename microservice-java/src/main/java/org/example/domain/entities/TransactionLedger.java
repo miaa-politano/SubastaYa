@@ -33,7 +33,7 @@ public class TransactionLedger {
     @Column(name = "DESCRIPTION", nullable = false)
     private String description;
 
-    @Column(name = "CREATED_AT_UTC", nullable = false)
+    @Column(name = "CREATED_AT", nullable = false)
     private LocalDateTime createdAtUtc;
 
     public TransactionLedger() {}
