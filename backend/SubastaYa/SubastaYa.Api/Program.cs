@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using SubastaYa.Api.Hubs;
 using SubastaYa.Api.Middlewares;
 using SubastaYa.Domain.Interfaces;
-using SubastaYa.Infrastructure.Persistence;
 using SubastaYa.Infrastructure.Services;
+using SubastaYa.Infrastructure.Persistence;
 
 LoadDotEnv();
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +37,14 @@ builder.Services.AddScoped<IAuctionEventRelayService, AuctionEventRelayService>(
 builder.Services.AddSingleton<IEventDeduplicator, InMemoryEventDeduplicator>();
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+    await SeedData.InitializeAsync(db);
+}
 
 app.UseGlobalExceptionHandler();
 

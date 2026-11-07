@@ -1,6 +1,7 @@
 package org.example.service.worker;
 
 import org.example.domain.entities.Auction;
+import org.example.domain.AuctionStatuses;
 import org.example.domain.repositories.AuctionRepository;
 import org.example.service.AuctionService;
 import org.slf4j.Logger;
@@ -40,7 +41,7 @@ public class AuctionExpirationWorker {
         LocalDateTime nowUtc = LocalDateTime.now(Clock.systemUTC());
 
         List<Auction> expiredAuctions = auctionRepository
-                .findByEndDateUtcBeforeAndStatus(nowUtc, "ACTIVAS", PageRequest.of(0, 100))
+                .findByEndDateUtcBeforeAndStatus(nowUtc, AuctionStatuses.ACTIVE, PageRequest.of(0, 100))
                 .getContent();
 
         for (Auction auction : expiredAuctions) {
@@ -53,7 +54,7 @@ public class AuctionExpirationWorker {
         }
 
         List<Auction> activeAuctions = auctionRepository
-                .findByFiltersPaginated(null, "ACTIVAS", null, null, PageRequest.of(0, 500))
+                .findByFiltersPaginated(null, AuctionStatuses.ACTIVE, null, null, PageRequest.of(0, 500))
                 .getContent();
 
         for (Auction auction : activeAuctions) {
@@ -76,7 +77,7 @@ public class AuctionExpirationWorker {
         ScheduledFuture<?> future = taskScheduler.schedule(() -> {
             try {
                 Auction currentAuction = auctionRepository.findById(auction.getId()).orElse(null);
-                if (currentAuction != null && "ACTIVAS".equalsIgnoreCase(currentAuction.getStatus())) {
+                if (currentAuction != null && AuctionStatuses.ACTIVE.equalsIgnoreCase(currentAuction.getStatus())) {
                     auctionService.liquidateExpiredAuction(currentAuction);
                     logger.info("Successfully liquidated auction ID: {} via task scheduler.", currentAuction.getId());
                 }
