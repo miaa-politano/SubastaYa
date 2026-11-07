@@ -4,6 +4,7 @@ using SubastaYa.Domain.Entities;
 using SubastaYa.Domain.Exceptions;
 using SubastaYa.Domain.Interfaces;
 using SubastaYa.Infrastructure.Persistence;
+using SubastaYa.Domain.Constants;
 
 namespace SubastaYa.Infrastructure.Services;
 
@@ -36,6 +37,11 @@ public class BidService : IBidService
             if (auction == null)
             {
                 throw new EntityNotFoundException(nameof(Auction), auctionId);
+            }
+
+            if (!string.Equals(auction.Status, AuctionStatuses.ACTIVE, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Bids can only be placed on active auctions.");
             }
 
             var previousWinnerId = auction.CurrentWinnerId;

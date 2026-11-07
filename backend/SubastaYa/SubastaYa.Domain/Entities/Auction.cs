@@ -41,7 +41,7 @@ public class Auction
     public DateTime EndDateUtc { get; set; }
 
     [Column("STATUS")]
-    public string Status { get; set; } = "Active";
+    public string Status { get; set; } = SubastaYa.Domain.Constants.AuctionStatuses.SCHEDULED;
 
     [ConcurrencyCheck]
     [Column("VERSION")]
