@@ -3,6 +3,8 @@ package org.example.service.impl;
 import org.example.api.contracts.CreateAuctionRequest;
 import org.example.domain.entities.Auction;
 import org.example.domain.repositories.AuctionRepository;
+import org.example.integration.AuctionEvent;
+import org.example.integration.RealtimeEventPublisher;
 import org.example.service.AuctionService;
 import org.example.service.AuditService;
 import org.example.service.WalletService;
@@ -10,10 +12,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.UUID;
 
 @Service
 public class AuctionServiceImpl implements AuctionService {
@@ -21,11 +28,13 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionRepository auctionRepository;
     private final WalletService walletService;
     private final AuditService auditService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
 
-    public AuctionServiceImpl(AuctionRepository auctionRepository, WalletService walletService, AuditService auditService) {
+    public AuctionServiceImpl(AuctionRepository auctionRepository, WalletService walletService, AuditService auditService, RealtimeEventPublisher realtimeEventPublisher) {
         this.auctionRepository = auctionRepository;
         this.walletService = walletService;
         this.auditService = auditService;
+        this.realtimeEventPublisher = realtimeEventPublisher;
     }
 
     @Override
@@ -63,8 +72,8 @@ public class AuctionServiceImpl implements AuctionService {
             throw new IllegalArgumentException("Bids can only be placed on active auctions.");
         }
 
-        LocalDateTime nowUtc = LocalDateTime.now(Clock.systemUTC());
-        if (nowUtc.isAfter(auction.getEndDateUtc())) {
+        OffsetDateTime nowUtc = OffsetDateTime.now(Clock.systemUTC());
+        if (nowUtc.isAfter(auction.getEndDateUtc().atOffset(ZoneOffset.UTC))) {
             throw new IllegalArgumentException("The auction has already expired.");
         }
 
@@ -81,24 +90,102 @@ public class AuctionServiceImpl implements AuctionService {
         auction.setCurrentWinnerId(bidderId);
         auction.setCurrentPrice(amount);
 
-        long secondsLeft = Duration.between(nowUtc, auction.getEndDateUtc()).toSeconds();
+        long secondsLeft = Duration.between(nowUtc.toLocalDateTime(), auction.getEndDateUtc()).toSeconds();
+        boolean timeExtended = false;
         if (secondsLeft <= 60) {
             auction.setEndDateUtc(auction.getEndDateUtc().plusMinutes(2));
             auditService.logTimeExtension(auctionId, 2, "Anti-sniping triggered.");
+            timeExtended = true;
         }
 
-        return auctionRepository.saveAndFlush(auction);
+        Auction savedAuction = auctionRepository.saveAndFlush(auction);
+
+        String eventIdNewBid = UUID.randomUUID().toString();
+        String eventIdExtended = timeExtended ? UUID.randomUUID().toString() : null;
+        OffsetDateTime timestampUtc = OffsetDateTime.now(Clock.systemUTC());
+        final boolean finalTimeExtended = timeExtended;
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                AuctionEvent newBidEvent = new AuctionEvent(
+                        eventIdNewBid,
+                        savedAuction.getId().longValue(),
+                        "NewBid",
+                        savedAuction.getCurrentPrice(),
+                        savedAuction.getCurrentWinnerId().longValue(),
+                        "User_" + savedAuction.getCurrentWinnerId(),
+                        savedAuction.getEndDateUtc().atOffset(ZoneOffset.UTC),
+                        timestampUtc,
+                        null, null, null,
+                        savedAuction.getStatus(),
+                        "User_" + savedAuction.getCurrentWinnerId()
+                );
+                realtimeEventPublisher.publishEvent(newBidEvent);
+
+                if (finalTimeExtended && eventIdExtended != null) {
+                    AuctionEvent extendedEvent = new AuctionEvent(
+                            eventIdExtended,
+                            savedAuction.getId().longValue(),
+                            "Extended",
+                            savedAuction.getCurrentPrice(),
+                            savedAuction.getCurrentWinnerId().longValue(),
+                            "User_" + savedAuction.getCurrentWinnerId(),
+                            savedAuction.getEndDateUtc().atOffset(ZoneOffset.UTC),
+                            timestampUtc,
+                            null, null, null,
+                            savedAuction.getStatus(),
+                            "User_" + savedAuction.getCurrentWinnerId()
+                    );
+                    realtimeEventPublisher.publishEvent(extendedEvent);
+                }
+            }
+        });
+
+        return savedAuction;
     }
 
     @Override
     @Transactional
     public void liquidateExpiredAuction(Auction auction) {
-        if (auction.getCurrentWinnerId() != null) {
-            walletService.settleAuctionPayment(auction.getId(), auction.getSellerId(), auction.getCurrentWinnerId(), auction.getCurrentPrice());
+        Integer winnerId = auction.getCurrentWinnerId();
+        BigDecimal finalAmount = auction.getCurrentPrice();
+        String finalStatus;
+        final String finalWinnerUsername;
+
+        if (winnerId != null) {
+            walletService.settleAuctionPayment(auction.getId(), auction.getSellerId(), winnerId, finalAmount);
             auction.setStatus("FINALIZADAS");
+            finalStatus = "FINALIZADAS";
+            finalWinnerUsername = "User_" + winnerId;
         } else {
             auction.setStatus("DESIERTAS");
+            finalStatus = "DESIERTAS";
+            finalWinnerUsername = null;
         }
-        auctionRepository.save(auction);
+
+        Auction savedAuction = auctionRepository.saveAndFlush(auction);
+        String eventIdClosed = UUID.randomUUID().toString();
+        OffsetDateTime timestampUtc = OffsetDateTime.now(Clock.systemUTC());
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                AuctionEvent closedEvent = new AuctionEvent(
+                        eventIdClosed,
+                        savedAuction.getId().longValue(),
+                        "Closed",
+                        finalAmount,
+                        winnerId != null ? winnerId.longValue() : null,
+                        finalWinnerUsername,
+                        savedAuction.getEndDateUtc().atOffset(ZoneOffset.UTC),
+                        timestampUtc,
+                        null, null, null,
+                        finalStatus,
+                        finalWinnerUsername
+                );
+                realtimeEventPublisher.publishEvent(closedEvent);
+            }
+        });
     }
 }

@@ -51,8 +51,10 @@ export const useAuctionSocket = (auctionId, initialPrice, currentUserId, onAntiS
 
     const handleTimeExtended = useCallback((auctionIdReceived, newEndDate, reason) => {
         if (Number(auctionIdReceived) !== Number(auctionId)) return;
-        if (onAntiSnipingExtend) onAntiSnipingExtend();
-        addToast(`⏳ Anti-Sniping activado: Subasta extendida +2 minutos (${reason || 'Oferta en último minuto'}).`, 'warning', 6000);
+        if (onAntiSnipingExtend) {
+            onAntiSnipingExtend(newEndDate);
+        }
+        addToast(`⏳ Anti-Sniping activado: Subasta extendida hasta ${new Date(newEndDate).toLocaleTimeString()} (${reason || 'Oferta en último minuto'}).`, 'warning', 6000);
     }, [auctionId, onAntiSnipingExtend, addToast]);
 
     const handleAuctionClosed = useCallback((auctionIdReceived, winnerUsername, finalAmount) => {

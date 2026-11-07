@@ -1,4 +1,3 @@
-/* cSpell:disable */
 import { useState, useEffect } from 'react';
 import { useToast } from '../../Context/ToastContext.jsx';
 import { useAuctionSocket } from '../../Hooks/useAuctionSocket.js';
@@ -6,7 +5,6 @@ import { LoadingSpinner } from '../Common/LoadingSpinner.jsx';
 import { AuctionTimer } from './AuctionTimer.jsx';
 import { AuctionPriceDisplay } from './AuctionPriceDisplay.jsx';
 import { AuctionBidsFeed } from './AuctionBidsFeed.jsx';
-import { AuctionUxTestingPanel } from './AuctionUxTestingPanel.jsx';
 import { BiddingConsole } from '../Bidding/BiddingConsole.jsx';
 
 export const AuctionRoom = ({
@@ -17,15 +15,8 @@ export const AuctionRoom = ({
                                 onRefreshBalance
                             }) => {
     const { addToast } = useToast();
-    const [timeLeft, setTimeLeft] = useState(75);
-
-    useEffect(() => {
-        if (timeLeft <= 0) return;
-        const interval = setInterval(() => {
-            setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [timeLeft]);
+    const [endDate, setEndDate] = useState(null);
+    const [timeLeft, setTimeLeft] = useState(120);
 
     const {
         currentPrice,
@@ -33,34 +24,37 @@ export const AuctionRoom = ({
         leadershipStatus,
         bidsHistory,
         isSimulatingNetwork,
-        handleIncomingBid,
-        handleTimeExtended,
         handleBidSubmit
-    } = useAuctionSocket(auctionId, initialPrice, currentUserId, () => {
-        setTimeLeft((prev) => prev + 120);
-    }, onRefreshBalance);
+    } = useAuctionSocket(
+        auctionId,
+        initialPrice,
+        currentUserId,
+        (newEndDate) => {
+            if (newEndDate) {
+                setEndDate(newEndDate);
+            }
+        },
+        onRefreshBalance
+    );
 
-    const simulateNetworkRequest = (type) => {
-        if (type === '409') {
-            addToast('HTTP 409 Conflict: Oferta concurrente rechazada por bloqueo optimista.', 'error');
-        } else if (type === '422') {
-            addToast('HTTP 422 Unprocessable Entity: Saldo disponible insuficiente para cubrir la garantía.', 'error');
-        }
-    };
-
-    const getRoomItemTitle = () => {
-        if (auctionId === 99) return "Notebook Gamer ASUS ROG Strix";
-        if (auctionId === 100) return "Monitor Gaming 27'' Curved 165Hz";
-        if (auctionId === 1) return "Notebook Gamer Lenovo Legion";
-        if (auctionId === 2) return "Monitor 27'' 165Hz IPS";
-        return "Artículo de Tecnología";
-    };
+    useEffect(() => {
+        if (!endDate) return;
+        const targetTime = new Date(endDate).getTime();
+        const updateTimer = () => {
+            const now = new Date().getTime();
+            const remaining = Math.max(0, Math.floor((targetTime - now) / 1000));
+            setTimeLeft(remaining);
+        };
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [endDate]);
 
     const isClosed = timeLeft <= 0;
 
     const auctionData = {
         currentPrice: currentPrice,
-        minIncrement: auctionId === 2 ? 2000 : 5000, // Usa los $5.000 del seed para la Subasta #1 y $2.000 para la #2
+        minIncrement: 5000,
         isClosed
     };
 
@@ -72,7 +66,6 @@ export const AuctionRoom = ({
                         <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400">Sala en Tiempo Real</span>
                         <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 flex-wrap">
                             Subasta #{auctionId}
-                            <span className="text-slate-400 font-medium text-lg">- {getRoomItemTitle()}</span>
                         </h2>
                     </div>
 
@@ -139,15 +132,6 @@ export const AuctionRoom = ({
                     </div>
                     <AuctionBidsFeed bidsHistory={bidsHistory} currentUserId={currentUserId} />
                 </div>
-
-                <AuctionUxTestingPanel
-                    currentPrice={currentPrice}
-                    currentUserId={currentUserId}
-                    auctionId={auctionId}
-                    onIncomingBid={handleIncomingBid}
-                    onExtend={() => handleTimeExtended(auctionId, null, 'Puja en zona crítica')}
-                    onSimulateError={simulateNetworkRequest}
-                />
             </div>
         </div>
     );

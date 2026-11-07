@@ -6,7 +6,7 @@ target/
 .idea/
 .vscode/
 *.env
-
+.contexto/
 # Archivos de base de datos locales
 *.db
 *.local

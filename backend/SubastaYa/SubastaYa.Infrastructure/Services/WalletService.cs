@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SubastaYa.Domain.Entities;
 using SubastaYa.Domain.Exceptions;
 using SubastaYa.Domain.Interfaces;
@@ -31,6 +31,7 @@ public class WalletService : IWalletService
         var wallet = await GetWalletByUserIdAsync(userId, cancellationToken);
 
         wallet.LockFunds(amount);
+        wallet.Version++;
 
         var ledgerEntry = new TransactionLedger
         {
@@ -59,6 +60,7 @@ public class WalletService : IWalletService
         var wallet = await GetWalletByUserIdAsync(userId, cancellationToken);
 
         wallet.UnlockFunds(amount);
+        wallet.Version++;
 
         var ledgerEntry = new TransactionLedger
         {
@@ -87,6 +89,7 @@ public class WalletService : IWalletService
         var wallet = await GetWalletByUserIdAsync(userId, cancellationToken);
 
         wallet.Debit(amount, fromLockedFunds: true);
+        wallet.Version++;
 
         var ledgerEntry = new TransactionLedger
         {
@@ -115,6 +118,7 @@ public class WalletService : IWalletService
         var wallet = await GetWalletByUserIdAsync(userId, cancellationToken);
 
         wallet.Credit(amount);
+        wallet.Version++;
 
         var ledgerEntry = new TransactionLedger
         {

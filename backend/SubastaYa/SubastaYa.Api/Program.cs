@@ -15,7 +15,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? ["http://localhost:5173", "https://localhost:5173"];
+        policy.WithOrigins(origins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -23,11 +25,15 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IBidService, BidService>();
 builder.Services.AddScoped<IAuctionNotificationService, AuctionNotificationService>();
+builder.Services.AddScoped<IAuctionEventRelayService, AuctionEventRelayService>();
+builder.Services.AddSingleton<IEventDeduplicator, InMemoryEventDeduplicator>();
 
 var app = builder.Build();
 

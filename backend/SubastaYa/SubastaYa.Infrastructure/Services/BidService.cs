@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SubastaYa.Domain.DTOs;
 using SubastaYa.Domain.Entities;
 using SubastaYa.Domain.Exceptions;
@@ -38,8 +38,6 @@ public class BidService : IBidService
                 throw new EntityNotFoundException(nameof(Auction), auctionId);
             }
 
-            auction.ValidateBidEligibility(bidderId, amount);
-
             var previousWinnerId = auction.CurrentWinnerId;
             var previousBidAmount = auction.CurrentPrice;
 
@@ -60,7 +58,8 @@ public class BidService : IBidService
 
             _context.Bids.Add(newBid);
 
-            auction.ApplyNewWinningBid(bidderId, amount);
+            auction.CurrentPrice = amount;
+            auction.CurrentWinnerId = bidderId;
 
             var now = DateTime.UtcNow;
             var timeRemaining = auction.EndDateUtc - now;
@@ -71,6 +70,8 @@ public class BidService : IBidService
                 auction.EndDateUtc = auction.EndDateUtc.AddMinutes(2);
                 wasExtended = true;
             }
+
+            auction.Version++;
 
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);

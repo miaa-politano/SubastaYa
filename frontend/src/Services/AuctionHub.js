@@ -8,7 +8,7 @@ export const createAuctionHubConnection = (auctionId, handlers = {}, onStatusCha
             withCredentials: true
         })
         .withAutomaticReconnect([0, 2000, 5000, 10000])
-        .configureLogging(signalR.LogLevel.None) // Evita saturar la consola si el backend está apagado
+        .configureLogging(signalR.LogLevel.None)
         .build();
 
     if (handlers.onNewBid) {
