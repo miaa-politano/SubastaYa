@@ -1,18 +1,4 @@
 ﻿export const AuctionCard = ({ auction, onOpenRoom }) => {
-    const getCleanTitle = () => {
-        if (auction.id === 99) return "Notebook Gamer ASUS ROG Strix";
-        if (auction.id === 100) return "Monitor Gaming 27'' Curved 165Hz";
-        if (auction.id === 1) return "Notebook Gamer Lenovo Legion";
-        return auction.title;
-    };
-
-    const getCleanDescription = () => {
-        if (auction.id === 99) return "Procesador Ryzen 9, 32GB RAM, SSD 1TB. Configurado para pruebas de cierre de subasta.";
-        if (auction.id === 100) return "Panel VA, 1ms de respuesta, QHD. Validando flujos alternativos y estados desiertos.";
-        if (auction.id === 1) return "Procesador Intel i7, RTX 4060. Configurado para test de concurrencia bajo estrés.";
-        return auction.description || "Sin descripción disponible.";
-    };
-
     return (
         <div className="bg-slate-900/80 border border-slate-800 hover:border-slate-700 p-5 rounded-xl flex flex-col justify-between h-full transition-all shadow-lg">
             <div className="space-y-3">
@@ -30,8 +16,8 @@
                 </div>
 
                 <div>
-                    <h3 className="text-base font-bold text-white tracking-tight">{getCleanTitle()}</h3>
-                    <p className="text-xs text-slate-400 mt-1">{getCleanDescription()}</p>
+                    <h3 className="text-base font-bold text-white tracking-tight">{auction.title}</h3>
+                    <p className="text-xs text-slate-400 mt-1">{auction.description || "Sin descripción disponible."}</p>
                 </div>
             </div>
 

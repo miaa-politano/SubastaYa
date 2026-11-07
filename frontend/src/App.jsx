@@ -1,4 +1,3 @@
-/* cSpell:disable */
 import { useState, useEffect, useCallback } from 'react';
 import { AuctionRoom } from './components/Auction/AuctionRoom.jsx';
 import { UserActivity } from './components/Activity/UserActivity.jsx';
@@ -47,30 +46,6 @@ function AppContent() {
     setPreviousView(currentView);
     setSelectedAuctionId(auctionId);
     setCurrentView('room');
-  };
-
-  const handleFakeBidSimulation = (amount) => {
-    const finalBidAmount = Number(amount);
-    const increment = selectedAuctionId === 2 ? 2000 : 5000;
-
-    setUserBalance(prev => Math.max(0, prev - increment));
-    setUserEscrow(prev => prev + increment);
-
-    setAuctions(prevAuctions => prevAuctions.map(auc =>
-        auc.id === selectedAuctionId ? { ...auc, currentPrice: finalBidAmount } : auc
-    ));
-
-    return fetch(`/api/auctions/${selectedAuctionId}/bids`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bidderId: currentUser.id, amount: finalBidAmount })
-    })
-        .then(() => {
-          triggerBalanceRefresh();
-        })
-        .catch((err) => {
-          console.warn("Bypass controlado:", err);
-        });
   };
 
   return (
@@ -146,7 +121,7 @@ function AppContent() {
                           initialPrice={priceToPass}
                           currentUserId={currentUser.id}
                           walletBalance={userBalance}
-                          onBidSubmit={handleFakeBidSimulation}
+                          onRefreshBalance={triggerBalanceRefresh}
                       />
                   );
                 })()}
