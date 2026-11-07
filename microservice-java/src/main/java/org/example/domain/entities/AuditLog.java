@@ -10,46 +10,60 @@ public class AuditLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID")
-    private Long id;
+    private Integer id;
 
-    @Column(name = "AUCTION_ID", nullable = false)
-    private Integer auctionId;
+    @Column(name = "ACTION", nullable = false, length = 100)
+    private String action;
 
-    @Column(name = "EVENT_TYPE", nullable = false, length = 100)
-    private String eventType;
+    @Column(name = "PERFORMED_BY", nullable = false, length = 150)
+    private String performedBy;
 
-    @Column(name = "PREVIOUS_STATE", length = 50)
-    private String previousState;
+    @Column(name = "DETAILS", nullable = false, length = 1000)
+    private String details;
 
-    @Column(name = "NEW_STATE", length = 50)
-    private String newState;
+    @Column(name = "TIMESTAMP", nullable = false)
+    private LocalDateTime timestamp;
 
-    @Column(name = "MESSAGE", length = 500)
-    private String message;
+    public AuditLog() {
+    }
 
-    @Column(name = "CREATED_AT_UTC", nullable = false)
-    private LocalDateTime createdAtUtc;
+    public Integer getId() {
+        return id;
+    }
 
-    public AuditLog() {}
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public String getAction() {
+        return action;
+    }
 
-    public Integer getAuctionId() { return auctionId; }
-    public void setAuctionId(Integer auctionId) { this.auctionId = auctionId; }
+    public void setAction(String action) {
+        this.action = action;
+    }
 
-    public String getEventType() { return eventType; }
-    public void setEventType(String eventType) { this.eventType = eventType; }
+    public String getPerformedBy() {
+        return performedBy;
+    }
 
-    public String getPreviousState() { return previousState; }
-    public void setPreviousState(String previousState) { this.previousState = previousState; }
+    public void setPerformedBy(String performedBy) {
+        this.performedBy = performedBy;
+    }
 
-    public String getNewState() { return newState; }
-    public void setNewState(String newState) { this.newState = newState; }
+    public String getDetails() {
+        return details;
+    }
 
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+    public void setDetails(String details) {
+        this.details = details;
+    }
 
-    public LocalDateTime getCreatedAtUtc() { return createdAtUtc; }
-    public void setCreatedAtUtc(LocalDateTime createdAtUtc) { this.createdAtUtc = createdAtUtc; }
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
 }

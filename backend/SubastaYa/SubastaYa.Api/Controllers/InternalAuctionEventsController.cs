@@ -24,7 +24,9 @@ public sealed class InternalAuctionEventsController : ControllerBase
     [HttpPost("notify-event")]
     public async Task<IActionResult> NotifyEvent([FromBody] AuctionEventRequest request, CancellationToken cancellationToken)
     {
-        var configuredApiKey = _configuration["InternalApiKey"] ?? Environment.GetEnvironmentVariable("INTERNAL_API_KEY");
+        var configuredApiKey = _configuration["InternalApiKey"];
+        if (string.IsNullOrWhiteSpace(configuredApiKey))
+            configuredApiKey = Environment.GetEnvironmentVariable("INTERNAL_API_KEY");
         if (string.IsNullOrWhiteSpace(configuredApiKey) || !Request.Headers.TryGetValue(ApiKeyHeader, out var suppliedApiKey) ||
             !string.Equals(suppliedApiKey.ToString(), configuredApiKey, StringComparison.Ordinal))
             return Unauthorized();

@@ -5,6 +5,7 @@ using SubastaYa.Domain.Interfaces;
 using SubastaYa.Infrastructure.Services;
 using SubastaYa.Infrastructure.Persistence;
 
+LoadDotEnv();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -68,3 +69,30 @@ app.MapControllers();
 app.MapHub<AuctionHub>("/hubs/auction");
 
 app.Run();
+
+static void LoadDotEnv()
+{
+    var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+    while (directory != null)
+    {
+        var envPath = Path.Combine(directory.FullName, ".env");
+        if (File.Exists(envPath))
+        {
+            foreach (var rawLine in File.ReadAllLines(envPath))
+            {
+                var line = rawLine.Trim();
+                if (line.Length == 0 || line.StartsWith('#')) continue;
+
+                var separator = line.IndexOf('=');
+                if (separator <= 0) continue;
+
+                var key = line[..separator].Trim();
+                var value = line[(separator + 1)..].Trim().Trim('"', '\'');
+                Environment.SetEnvironmentVariable(key, value);
+            }
+            return;
+        }
+
+        directory = directory.Parent;
+    }
+}
