@@ -67,6 +67,11 @@ public class AuctionServiceImpl implements AuctionService {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new IllegalArgumentException("Auction not found."));
 
+        if (auction.getSellerId() != null && auction.getSellerId().equals(bidderId)) {
+            auditService.logRejectedBid(auctionId, String.valueOf(bidderId), "Seller cannot bid on their own auction.");
+            throw new IllegalArgumentException("Seller cannot bid on their own auction.");
+        }
+
         if (!AuctionStatuses.ACTIVE.equalsIgnoreCase(auction.getStatus())) {
             throw new IllegalArgumentException("Bids can only be placed on active auctions.");
         }

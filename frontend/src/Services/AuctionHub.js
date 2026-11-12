@@ -1,6 +1,6 @@
 ﻿import * as signalR from '@microsoft/signalr';
 
-const HUB_URL = 'https://localhost:7073/hubs/auction';
+const HUB_URL = 'http://localhost:5273/hubs/auction';
 
 export const createAuctionHubConnection = (auctionId, handlers = {}, onStatusChange) => {
     const connection = new signalR.HubConnectionBuilder()

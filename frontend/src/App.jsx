@@ -5,27 +5,32 @@ import { AuctionCard } from './components/Auction/AuctionCard.jsx';
 import { ToastProvider } from './Context/ToastContext';
 import Wallet from './components/Wallet/Wallet.jsx';
 
+const DEMO_USERS = [
+  { id: 1, name: 'Vendedor Demo' },
+  { id: 2, name: 'Comprador Uno' },
+  { id: 3, name: 'Comprador Dos' },
+  { id: 4, name: 'Usuario Sin Fondos' }
+];
+
 function AppContent() {
   const [currentView, setCurrentView] = useState('catalog');
   const [previousView, setPreviousView] = useState('catalog');
   const [selectedAuctionId, setSelectedAuctionId] = useState(1);
   const [auctions, setAuctions] = useState([]);
-  const [userBalance, setUserBalance] = useState(105000);
-  const [userEscrow, setUserEscrow] = useState(45000);
+  const [userBalance, setUserBalance] = useState(0);
+  const [userEscrow, setUserEscrow] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [selectedUserId, setSelectedUserId] = useState(2);
 
-  const currentUser = {
-    id: 2,
-    name: 'Comprador_General'
-  };
+  const currentUser = DEMO_USERS.find((u) => u.id === selectedUserId) || DEMO_USERS[0];
 
   const triggerBalanceRefresh = useCallback(() => {
     fetch(`/api/wallet/balance?userId=${currentUser.id}`)
         .then((res) => res.json())
         .then((data) => {
           if (data) {
-            setUserBalance(data.availableBalance || data['availableBalance'] || 105000);
-            setUserEscrow(data.lockedBalance || data['lockedBalance'] || 45000);
+            setUserBalance(data.availableBalance ?? data['availableBalance'] ?? 0);
+            setUserEscrow(data.lockedBalance ?? data['lockedBalance'] ?? 0);
           }
         })
         .catch((err) => console.error("Error fetching financial metrics:", err));
@@ -36,9 +41,9 @@ function AppContent() {
   }, [currentView, currentUser.id, triggerBalanceRefresh]);
 
   useEffect(() => {
-    fetch(`/api/auctions?page=0&size=10&_t=${Date.now()}`)
+    fetch(`/api/auctions?page=0&size=20&_t=${Date.now()}`)
         .then((res) => res.json())
-        .then((data) => setAuctions(data.content || data['content'] || []))
+        .then((data) => setAuctions(data.content || data['content'] || (Array.isArray(data) ? data : [])))
         .catch((err) => console.error("Error fetching catalog:", err));
   }, [currentView]);
 
@@ -51,7 +56,7 @@ function AppContent() {
   return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
         <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-40">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
             <div className="flex items-center gap-6">
               <h1
                   onClick={() => setCurrentView('catalog')}
@@ -87,7 +92,7 @@ function AppContent() {
               </nav>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <div className="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 text-xs">
                 <span className="text-slate-400">Disponible:</span>
                 <strong className="text-emerald-400">${userBalance.toLocaleString('es-AR')}</strong>
@@ -96,13 +101,26 @@ function AppContent() {
                 <span className="text-slate-400">Retenido:</span>
                 <strong className="text-amber-500">${userEscrow.toLocaleString('es-AR')}</strong>
               </div>
-              <span className="text-xs text-slate-400 ml-2">
-                Usuario: <strong className="text-slate-200">{currentUser.name}</strong>
-              </span>
+              <div className="flex items-center gap-2 ml-1">
+                <label htmlFor="user-selector" className="text-xs text-slate-400">
+                  Usuario:
+                </label>
+                <select
+                    id="user-selector"
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(Number(e.target.value))}
+                    className="bg-slate-900 border border-slate-700 hover:border-cyan-500/50 text-slate-100 text-xs font-bold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-cyan-400 cursor-pointer"
+                >
+                  {DEMO_USERS.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} (#{user.id})
+                      </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </header>
-
         <main className="max-w-6xl mx-auto px-4 py-8 flex-1 w-full">
           {currentView === 'room' && (
               <div className="space-y-4">
@@ -114,11 +132,19 @@ function AppContent() {
                 </button>
                 {(() => {
                   const currentAuction = auctions.find(a => a.id === selectedAuctionId);
-                  const priceToPass = currentAuction ? (currentAuction.currentPrice || currentAuction.initialPrice) : 100000;
+                  const titleToPass = currentAuction ? (currentAuction.title || currentAuction.titulo) : null;
+                  const priceToPass = currentAuction ? (currentAuction.currentPrice || currentAuction.initialPrice || currentAuction.startingPrice) : 100000;
+                  const endDateToPass = currentAuction ? (currentAuction.endDate || currentAuction.endDateUtc || currentAuction.fechaFin || currentAuction.endsAt) : null;
+                  const incrementToPass = currentAuction ? (currentAuction.minIncrement || currentAuction.incrementoMinimo || 5000) : 5000;
+                  const sellerToPass = currentAuction ? (currentAuction.sellerId || currentAuction.vendedorId) : null;
                   return (
                       <AuctionRoom
                           auctionId={selectedAuctionId}
+                          auctionTitle={titleToPass}
+                          sellerId={sellerToPass}
                           initialPrice={priceToPass}
+                          initialEndDate={endDateToPass}
+                          minIncrement={incrementToPass}
                           currentUserId={currentUser.id}
                           walletBalance={userBalance}
                           onRefreshBalance={triggerBalanceRefresh}
@@ -129,11 +155,15 @@ function AppContent() {
           )}
 
           {currentView === 'activity' && (
-              <UserActivity onSelectAuction={handleOpenRoom} currentEscrow={userEscrow} />
+              <UserActivity
+                  onSelectAuction={handleOpenRoom}
+                  currentEscrow={userEscrow}
+                  currentUserId={currentUser.id}
+              />
           )}
 
           {currentView === 'wallet' && (
-              <Wallet />
+              <Wallet userId={currentUser.id} onBalanceUpdated={triggerBalanceRefresh} />
           )}
 
           {currentView === 'catalog' && (

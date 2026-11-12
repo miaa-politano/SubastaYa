@@ -8,7 +8,11 @@
 
             <div className="flex-1 overflow-y-auto max-h-56 space-y-2 pr-1">
                 {bidsHistory.map((bid) => {
-                    const isMine = bid.bidderId === currentUserId || bid.bidderUsername === currentUserId;
+                    const isMine =
+                        Number(bid.bidderId) === Number(currentUserId) ||
+                        String(bid.bidderUsername || '').includes('(TÚ)');
+                    const rawName = String(bid.bidderUsername || 'Usuario').replace(/\s*\(TÚ\)/gi, '');
+
                     return (
                         <div
                             key={bid.id}
@@ -24,14 +28,14 @@
                                         isMine ? 'bg-emerald-700 text-white' : 'bg-slate-800 text-slate-400'
                                     }`}
                                 >
-                                    {isMine ? 'TÚ' : bid.bidderUsername.slice(0, 2).toUpperCase()}
+                                    {isMine ? 'TÚ' : rawName.slice(0, 2).toUpperCase()}
                                 </div>
                                 <span className={`font-medium ${isMine ? 'text-emerald-300' : 'text-slate-300'}`}>
-                  {isMine ? `${bid.bidderUsername} (Tú)` : bid.bidderUsername}
-                </span>
+                                    {isMine ? `${rawName} (Tú)` : rawName}
+                                </span>
                             </div>
                             <div className="text-right">
-                                <span className="font-bold text-emerald-400 block">${Number(bid.amount).toLocaleString()}</span>
+                                <span className="font-bold text-emerald-400 block">${Number(bid.amount).toLocaleString('es-AR')}</span>
                                 <span className="text-[10px] text-slate-500">{bid.timestamp}</span>
                             </div>
                         </div>

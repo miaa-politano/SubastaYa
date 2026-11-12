@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useToast } from '../../Context/ToastContext.jsx';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuctionSocket } from '../../Hooks/useAuctionSocket.js';
+import { parseUtcDate } from '../../Hooks/useCountdown.js';
 import { LoadingSpinner } from '../Common/LoadingSpinner.jsx';
 import { AuctionTimer } from './AuctionTimer.jsx';
 import { AuctionPriceDisplay } from './AuctionPriceDisplay.jsx';
@@ -9,14 +9,22 @@ import { BiddingConsole } from '../Bidding/BiddingConsole.jsx';
 
 export const AuctionRoom = ({
                                 auctionId = 1,
+                                auctionTitle = null,
                                 initialPrice = 1450000,
+                                initialEndDate = null,
+                                minIncrement = 5000,
                                 currentUserId,
                                 walletBalance,
                                 onRefreshBalance
                             }) => {
-    const { addToast } = useToast();
-    const [endDate, setEndDate] = useState(null);
-    const [timeLeft, setTimeLeft] = useState(120);
+    const [endDate, setEndDate] = useState(initialEndDate);
+    const [timeLeft, setTimeLeft] = useState(null);
+
+    const handleAntiSnipingExtend = useCallback((newEndDate) => {
+        if (newEndDate) {
+            setEndDate(newEndDate);
+        }
+    }, []);
 
     const {
         currentPrice,
@@ -29,32 +37,31 @@ export const AuctionRoom = ({
         auctionId,
         initialPrice,
         currentUserId,
-        (newEndDate) => {
-            if (newEndDate) {
-                setEndDate(newEndDate);
-            }
-        },
+        handleAntiSnipingExtend,
         onRefreshBalance
     );
 
     useEffect(() => {
         if (!endDate) return;
-        const targetTime = new Date(endDate).getTime();
+        const targetTime = parseUtcDate(endDate);
+        if (Number.isNaN(targetTime)) return;
+
         const updateTimer = () => {
-            const now = new Date().getTime();
+            const now = Date.now();
             const remaining = Math.max(0, Math.floor((targetTime - now) / 1000));
             setTimeLeft(remaining);
         };
+
         updateTimer();
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, [endDate]);
 
-    const isClosed = timeLeft <= 0;
+    const isClosed = timeLeft !== null && timeLeft <= 0;
 
     const auctionData = {
         currentPrice: currentPrice,
-        minIncrement: 5000,
+        minIncrement: minIncrement,
         isClosed
     };
 
@@ -65,7 +72,7 @@ export const AuctionRoom = ({
                     <div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400">Sala en Tiempo Real</span>
                         <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 flex-wrap">
-                            Subasta #{auctionId}
+                            {auctionTitle || `Subasta #${auctionId}`}
                         </h2>
                     </div>
 

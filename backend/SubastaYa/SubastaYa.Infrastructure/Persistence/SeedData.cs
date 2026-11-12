@@ -5,7 +5,7 @@ using SubastaYa.Domain.Entities;
 namespace SubastaYa.Infrastructure.Persistence;
 
 /// <summary>
-/// Small, idempotent development dataset. Production data is never seeded here.
+/// Initializes database seed data.
 /// </summary>
 public static class SeedData
 {
@@ -14,10 +14,10 @@ public static class SeedData
         var now = DateTime.UtcNow;
         var users = new[]
         {
-            new User { Email = "seller@subastaya.local", Name = "Seller Demo", PasswordHash = "seed-only" },
-            new User { Email = "buyer.one@subastaya.local", Name = "Buyer One", PasswordHash = "seed-only" },
-            new User { Email = "buyer.two@subastaya.local", Name = "Buyer Two", PasswordHash = "seed-only" },
-            new User { Email = "observer@subastaya.local", Name = "Observer Demo", PasswordHash = "seed-only" }
+            new User { Email = "vendedor@test.com", Name = "Vendedor Demo", PasswordHash = "seed-only" },
+            new User { Email = "comprador1@test.com", Name = "Comprador Uno", PasswordHash = "seed-only" },
+            new User { Email = "comprador2@test.com", Name = "Comprador Dos", PasswordHash = "seed-only" },
+            new User { Email = "sinfondos@test.com", Name = "Usuario Sin Fondos", PasswordHash = "seed-only" }
         };
 
         foreach (var user in users)
@@ -26,12 +26,14 @@ public static class SeedData
             if (existing == null) db.Users.Add(user);
         }
 
+        await db.SaveChangesAsync(cancellationToken);
+
         var categories = new[]
         {
-            new Category { Name = "Technology", Description = "Computers and electronics" },
-            new Category { Name = "Home", Description = "Home and garden" },
-            new Category { Name = "Collectibles", Description = "Collectible items" },
-            new Category { Name = "Vehicles", Description = "Vehicles and accessories" }
+            new Category { Name = "Tecnología", Description = "Artículos tecnológicos y dispositivos" },
+            new Category { Name = "Coleccionables", Description = "Artículos de colección y rarezas" },
+            new Category { Name = "Indumentaria", Description = "Ropa, calzado y accesorios" },
+            new Category { Name = "Vehículos", Description = "Vehículos y accesorios motorizados" }
         };
 
         foreach (var category in categories)
@@ -41,40 +43,118 @@ public static class SeedData
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
         await EnsureWalletsAsync(db, cancellationToken);
 
         if (await db.Auctions.AnyAsync(cancellationToken)) return;
 
-        var seller = await db.Users.SingleAsync(x => x.Email == "seller@subastaya.local", cancellationToken);
-        var technology = await db.Categories.SingleAsync(x => x.Name == "Technology", cancellationToken);
-        var home = await db.Categories.SingleAsync(x => x.Name == "Home", cancellationToken);
-        var collectibles = await db.Categories.SingleAsync(x => x.Name == "Collectibles", cancellationToken);
+        var seller = await db.Users.SingleAsync(x => x.Email == "vendedor@test.com", cancellationToken);
+        var buyer1 = await db.Users.SingleAsync(x => x.Email == "comprador1@test.com", cancellationToken);
+
+        var tecnologia = await db.Categories.SingleAsync(x => x.Name == "Tecnología", cancellationToken);
+        var coleccionables = await db.Categories.SingleAsync(x => x.Name == "Coleccionables", cancellationToken);
+        var indumentaria = await db.Categories.SingleAsync(x => x.Name == "Indumentaria", cancellationToken);
+        var vehiculos = await db.Categories.SingleAsync(x => x.Name == "Vehículos", cancellationToken);
 
         db.Auctions.AddRange(
-            new Auction { SellerId = seller.Id, CategoryId = technology.Id, Title = "Laptop Demo", Description = "Active seeded auction", StartingPrice = 100, CurrentPrice = 100, MinIncrement = 10, StartDateUtc = now.AddMinutes(-10), EndDateUtc = now.AddHours(2), Status = AuctionStatuses.ACTIVE },
-            new Auction { SellerId = seller.Id, CategoryId = home.Id, Title = "Desk Demo", Description = "Scheduled seeded auction", StartingPrice = 80, CurrentPrice = 80, MinIncrement = 5, StartDateUtc = now.AddHours(1), EndDateUtc = now.AddHours(3), Status = AuctionStatuses.SCHEDULED },
-            new Auction { SellerId = seller.Id, CategoryId = collectibles.Id, Title = "Poster Demo", Description = "Finished seeded auction", StartingPrice = 40, CurrentPrice = 75, MinIncrement = 5, StartDateUtc = now.AddDays(-2), EndDateUtc = now.AddHours(-2), Status = AuctionStatuses.FINISHED },
-            new Auction { SellerId = seller.Id, CategoryId = technology.Id, Title = "Keyboard Demo", Description = "No-sale seeded auction", StartingPrice = 25, CurrentPrice = 25, MinIncrement = 5, StartDateUtc = now.AddDays(-2), EndDateUtc = now.AddHours(-3), Status = AuctionStatuses.NO_SALE },
-            new Auction { SellerId = seller.Id, CategoryId = home.Id, Title = "Lamp Demo", Description = "Second active seeded auction", StartingPrice = 30, CurrentPrice = 30, MinIncrement = 5, StartDateUtc = now.AddMinutes(-5), EndDateUtc = now.AddHours(1), Status = AuctionStatuses.ACTIVE }
+            new Auction
+            {
+                SellerId = seller.Id,
+                CategoryId = tecnologia.Id,
+                Title = "Smartphone Activa Estándar",
+                Description = "Subasta activa con pujas previas",
+                StartingPrice = 20000,
+                CurrentPrice = 45000,
+                MinIncrement = 5000,
+                StartDateUtc = now.AddMinutes(-30),
+                EndDateUtc = now.AddMinutes(25),
+                Status = AuctionStatuses.ACTIVE,
+                CurrentWinnerId = buyer1.Id
+            },
+            new Auction
+            {
+                SellerId = seller.Id,
+                CategoryId = coleccionables.Id,
+                Title = "Reloj Antiguo Activo Crítico",
+                Description = "Subasta a punto de expirar para probar anti-sniping",
+                StartingPrice = 10000,
+                CurrentPrice = 10000,
+                MinIncrement = 2000,
+                StartDateUtc = now.AddMinutes(-58),
+                EndDateUtc = now.AddSeconds(90),
+                Status = AuctionStatuses.ACTIVE
+            },
+            new Auction
+            {
+                SellerId = seller.Id,
+                CategoryId = vehiculos.Id,
+                Title = "Casco de Moto Próximo",
+                Description = "Subasta programada para el día de mañana",
+                StartingPrice = 15000,
+                CurrentPrice = 15000,
+                MinIncrement = 1000,
+                StartDateUtc = now.AddHours(24),
+                EndDateUtc = now.AddHours(48),
+                Status = AuctionStatuses.SCHEDULED
+            },
+            new Auction
+            {
+                SellerId = seller.Id,
+                CategoryId = indumentaria.Id,
+                Title = "Campera de Cuero Vencida Ganada",
+                Description = "Subasta finalizada con adjudicación pendiente de worker",
+                StartingPrice = 30000,
+                CurrentPrice = 50000,
+                MinIncrement = 5000,
+                StartDateUtc = now.AddDays(-2),
+                EndDateUtc = now.AddHours(-3),
+                Status = AuctionStatuses.FINISHED,
+                CurrentWinnerId = buyer1.Id
+            },
+            new Auction
+            {
+                SellerId = seller.Id,
+                CategoryId = tecnologia.Id,
+                Title = "Teclado Antiguo Desierto",
+                Description = "Subasta finalizada sin ofertas registradas",
+                StartingPrice = 5000,
+                CurrentPrice = 5000,
+                MinIncrement = 500,
+                StartDateUtc = now.AddDays(-3),
+                EndDateUtc = now.AddHours(-5),
+                Status = AuctionStatuses.NO_SALE
+            }
         );
 
         await db.SaveChangesAsync(cancellationToken);
 
-        var buyer = await db.Users.SingleAsync(x => x.Email == "buyer.one@subastaya.local", cancellationToken);
-        var finishedAuction = await db.Auctions.SingleAsync(x => x.Title == "Poster Demo", cancellationToken);
-        var buyerWallet = await db.Wallets.SingleAsync(x => x.UserId == buyer.Id, cancellationToken);
-        buyerWallet.LockedBalance = 75;
-        buyerWallet.AvailableBalance = buyerWallet.TotalBalance - buyerWallet.LockedBalance;
-        finishedAuction.CurrentWinnerId = buyer.Id;
-        db.Bids.Add(new Bid { AuctionId = finishedAuction.Id, BidderId = buyer.Id, Amount = 75, CreatedAtUtc = now.AddHours(-3) });
-        db.TransactionLedgers.Add(new TransactionLedger
-        {
-            WalletId = buyerWallet.Id,
-            Amount = 75,
-            Type = "Lock",
-            Description = $"Seed bid for auction {finishedAuction.Id}",
-            CreatedAtUtc = now.AddHours(-3)
-        });
+        var activeStandardAuction = await db.Auctions.SingleAsync(x => x.Title == "Smartphone Activa Estándar", cancellationToken);
+        var buyerWallet = await db.Wallets.SingleAsync(x => x.UserId == buyer1.Id, cancellationToken);
+
+        db.Bids.AddRange(
+            new Bid { AuctionId = activeStandardAuction.Id, BidderId = buyer1.Id, Amount = 30000, CreatedAtUtc = now.AddMinutes(-20) },
+            new Bid { AuctionId = activeStandardAuction.Id, BidderId = buyer1.Id, Amount = 45000, CreatedAtUtc = now.AddMinutes(-10) }
+        );
+
+        db.TransactionLedgers.AddRange(
+            new TransactionLedger
+            {
+                WalletId = buyerWallet.Id,
+                Amount = 150000,
+                Type = "Deposit",
+                Description = "Depósito inicial simulado",
+                CreatedAtUtc = now.AddDays(-1)
+            },
+            new TransactionLedger
+            {
+                WalletId = buyerWallet.Id,
+                Amount = 45000,
+                Type = "Lock",
+                Description = $"Retención en garantía por puja en subasta {activeStandardAuction.Id}",
+                CreatedAtUtc = now.AddMinutes(-10)
+            }
+        );
+
         await db.SaveChangesAsync(cancellationToken);
     }
 
@@ -84,12 +164,37 @@ public static class SeedData
         foreach (var user in users)
         {
             if (await db.Wallets.AnyAsync(x => x.UserId == user.Id, cancellationToken)) continue;
+
+            decimal total = 0;
+            decimal locked = 0;
+
+            if (user.Email == "vendedor@test.com")
+            {
+                total = 0;
+                locked = 0;
+            }
+            else if (user.Email == "comprador1@test.com")
+            {
+                total = 150000;
+                locked = 45000;
+            }
+            else if (user.Email == "comprador2@test.com")
+            {
+                total = 200000;
+                locked = 0;
+            }
+            else if (user.Email == "sinfondos@test.com")
+            {
+                total = 500;
+                locked = 0;
+            }
+
             db.Wallets.Add(new Wallet
             {
                 UserId = user.Id,
-                TotalBalance = user.Email.StartsWith("buyer", StringComparison.OrdinalIgnoreCase) ? 1000 : 0,
-                LockedBalance = 0,
-                AvailableBalance = user.Email.StartsWith("buyer", StringComparison.OrdinalIgnoreCase) ? 1000 : 0
+                TotalBalance = total,
+                LockedBalance = locked,
+                AvailableBalance = total - locked
             });
         }
 
