@@ -1,13 +1,11 @@
 /* cSpell:disable */
 import { useState, useEffect, useCallback } from 'react';
 
-export default function Wallet() {
+export default function Wallet({ userId = 2, onBalanceUpdated }) {
     const [balance, setBalance] = useState({ total: 0, available: 0, escrow: 0 });
     const [depositAmount, setDepositAmount] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-
-    const userId = 2;
 
     const fetchWalletBalance = useCallback(async () => {
         try {
@@ -69,6 +67,9 @@ export default function Wallet() {
 
             setDepositAmount('');
             await fetchWalletBalance();
+            if (onBalanceUpdated) {
+                onBalanceUpdated();
+            }
         } catch (error) {
             setErrorMessage('Error al procesar el depósito.');
             console.error(error);
