@@ -1,15 +1,70 @@
-# SubastaYa - Real-Time Bidding Platform
+# SubastaYa - Real-Time Distributed Bidding Platform
 
-A full-stack, real-time auction and electronic commerce platform designed with an ACID-compliant transactional core, escrow-backed bidding guarantees, dynamic anti-sniping protection, and scheduled background workers.
+A full-stack, real-time auction and electronic commerce platform built on a **polyglot distributed microservices architecture**. It features an ACID-compliant transactional core in Java, escrow-backed bidding guarantees, immutable double-entry financial accounting, dynamic anti-sniping protection, a transactional **Outbox Pattern** relay, and real-time WebSocket broadcasting via **C# SignalR**.
+
+---
+
+## System Architecture
+
+SubastaYa separates core financial and transactional business logic from real-time pub/sub broadcasting:
+
+* **Java (Spring Boot):** Acts as the transactional source of truth. Handles auction lifecycle, bid validation, seller self-bid prevention, `SERIALIZABLE` optimistic locking, Escrow wallet guarantees (`WalletServiceImpl`), Anti-Sniping extensions, background liquidation workers (`AuctionExpirationWorker`), and atomic Outbox event persistence (`OutboxService`).
+* **Financial Integrity vs. Operational Auditing:**
+  * `TRANSACTION_LEDGER`: Immutable accounting ledger recording every monetary state transition (`DEPOSIT`, `LOCK`, `REFUND`, `DEBIT`, `CREDIT`).
+  * `AUDIT_LOG`: Operational and security trail (`AuditService`) logging business rule decisions such as rejected self-bids and anti-sniping timer extensions.
+* **C# (.NET 9 + SignalR):** Acts as the internal messaging middleware and real-time relay. Exposes a secured internal webhook (`/api/internal/auctions/notify-event`), validates API keys (`X-Internal-Api-Key`), deduplicates events, and broadcasts state updates to isolated SignalR room groups (`Auction_{id}`).
+* **PostgreSQL 16:** Shared relational persistence ensuring ACID guarantees across domain entities and the transactional Outbox table.
+* **React 18 + Vite:** Real-time client featuring live UTC countdowns, dynamic bidding console, auction creation form, multi-user switcher, and live Escrow balance synchronization.
+
+```mermaid
+flowchart LR
+    UI[React Frontend<br/>Port 5173]
+    JAVA[Java Spring Boot<br/>Transactional Core - Port 8080]
+    DB[(PostgreSQL 16<br/>Shared Persistence)]
+    OUTBOX[(OUTBOX_EVENT<br/>Transactional Queue)]
+    CS[C# .NET 9<br/>Internal Relay - Port 5273]
+    HUB[SignalR Hub<br/>Groups: Auction_ID]
+
+    UI -->|REST: Bids, Auctions & Wallets| JAVA
+    JAVA -->|ACID Transactions & Ledger| DB
+    JAVA -->|Atomic Write: PENDING| OUTBOX
+    OUTBOX -->|Async Polling Worker| JAVA
+    JAVA -->|POST /notify-event + X-Internal-Api-Key| CS
+    CS --> HUB
+    HUB -->|WebSocket: ReceiveNewBid / Extended / Closed| UI
+```
+
+### End-to-End Bidding & Outbox Flow
+
+```mermaid
+sequenceDiagram
+    participant R as React Client
+    participant J as Java Microservice
+    participant DB as PostgreSQL
+    participant O as Outbox Worker
+    participant C as C# .NET Relay
+    participant S as SignalR Hub
+
+    R->>J: POST /api/auctions/{id}/bids
+    J->>J: Validate seller, solvency, increment & Anti-Sniping
+    J->>DB: Save Auction, Bid, Wallet Ledger, AuditLog & OutboxEvent
+    DB-->>J: Commit Confirmed
+    J-->>R: 200 OK
+    O->>DB: Poll PENDING events
+    O->>C: POST /api/internal/auctions/notify-event (X-Internal-Api-Key)
+    C->>C: Validate Key, Contract & Deduplicate EventId
+    C->>S: Broadcast to Group Auction_{id}
+    S-->>R: Real-Time UI & Wallet Sync
+```
 
 ---
 
 ## Tech Stack
-* **Frontend:** React 18, Tailwind CSS, Vite, SignalR Hub Client / WebSockets
-* **Backend Core (.NET):** C# .NET 9, ASP.NET Core Web API, SignalR, Entity Framework Core
-* **Microservices (Java):** Java 17, Spring Boot 3.2.3, Spring Data JPA, Hibernate ORM
-* **Database & Infra:** PostgreSQL 16 (Containerized via Docker Compose)
-* **Documentation & Contracts:** OpenAPI / Swagger UI
+* **Frontend:** React 18, Tailwind CSS, Vite, `@microsoft/signalr` WebSocket Client
+* **Core Business Microservice:** Java 17, Spring Boot 3.2.3, Spring Data JPA, Hibernate ORM
+* **Real-Time Middleware & Relay:** C# .NET 9, ASP.NET Core Web API, SignalR, Entity Framework Core
+* **Database & Infrastructure:** PostgreSQL 16 (Containerized via Docker Compose)
+* **Documentation & Contracts:** OpenAPI 3.0 / Swagger UI
 
 ---
 
@@ -17,160 +72,167 @@ A full-stack, real-time auction and electronic commerce platform designed with a
 
 ### 1. Prerequisites
 Ensure you have the following installed on your machine:
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-* [.NET 9 SDK](https://dotnet.microsoft.com/)
-* [Node.js (LTS)](https://nodejs.org/)
-* [Java Development Kit (JDK 17 LTS)](https://adoptium.net/)
-* [IntelliJ IDEA](https://www.jetbrains.com/idea/) or your preferred IDE for Java microservices
+* [Docker Desktop](https://docker.com)
+* [Java Development Kit (JDK 17 LTS)](https://adoptium.net)
+* [.NET 9 SDK](https://microsoft.com)
+* [Node.js (LTS)](https://nodejs.org)
 
 ### 2. Database Setup (Docker & Seed Data)
-The project relies on a containerized PostgreSQL instance (`subastaya_db`) operating on the standard `public` schema. Run the container in the background:
+The project relies on a containerized PostgreSQL instance (`subastaya_db`) operating on the standard `public` schema:
 
 ```bash
 docker compose up -d
 ```
 
-To perform a clean reset of the relational schema and seed the mandatory baseline data (src/main/resources/data.sql):
+To perform a clean reset of the relational schema and re-seed baseline data:
 
 ```bash
 docker compose down -v
 docker compose up -d
 ```
 
-Note: The persistence layer enforces PhysicalNamingStrategyStandardImpl and globally_quoted_identifiers=true to maintain strict uppercase naming consistency across Hibernate and PostgreSQL.
+> **Note:** The JPA persistence layer enforces `PhysicalNamingStrategyStandardImpl` and `globally_quoted_identifiers=true` to maintain strict uppercase naming consistency across Hibernate and PostgreSQL.
 
 ### 3. Running the Application
-You will need separate terminal instances to execute all services simultaneously.
+Run each service in a dedicated terminal instance:
 
-Backend Core (API & SignalR Hub):
+**1. Java Transactional Microservice (Spring Boot):**
+1. Open the `microservice-java` module in IntelliJ IDEA (or run via Maven).
+2. Verify `application.properties` points to `jdbc:postgresql://localhost:5432/subastaya_db`.
+3. Run `org.example.Main`.
+* **Base URL:** `http://localhost:8080`
+* **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
 
+**2. C# SignalR Relay & Middleware (.NET 9):**
 ```bash
 cd backend/SubastaYa.Api
 dotnet ef database update
 dotnet run
 ```
+* **Base URL:** `http://localhost:5273`
+* **SignalR Hub:** `http://localhost:5273/hubs/auction`
+* **Swagger UI:** `http://localhost:5273/swagger/index.html`
 
-API Base URL: http://localhost:5000 (or the port defined in launchSettings.json).
-Swagger UI: http://localhost:5000/swagger
-
-Java Microservices (Spring Boot):
-1. Open the microservice-java module in IntelliJ IDEA.
-2. Verify that src/main/resources/application.properties connects to jdbc:postgresql://localhost:5432/subastaya_db with spring.jpa.hibernate.ddl-auto=validate.
-3. Run the application via org.example.Main (or SubastaYaApplication.java).
-
-Port: http://localhost:8080
-OpenAPI Documentation: http://localhost:8080/swagger-ui.html
-
-Frontend (React Client):
+**3. React Frontend Client:**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-
-Web Client: http://localhost:5173
-
----
-
-## Mandatory Seed Data
-The database automatically seeds standard test accounts and active auctions to validate user solvency and financial escrow constraints:
-* vendedor@test.com (User ID 1): Seller account (Total Balance: $0.00).
-* comprador1@test.com (User ID 2): Current leading bidder (Total: $150,000.00 | Locked: $45,000.00 | Available: $105,000.00).
-* comprador2@test.com (User ID 3): Solvent prospective bidder (Total: $200,000.00 | Locked: $0.00 | Available: $200,000.00).
-* sinfondos@test.com (User ID 4): Insolvent account (Total: $500.00 | Available: $500.00) designed to test bid rejections.
+* **Web Client:** `http://localhost:5173`
 
 ---
 
-## Concurrency & Stress Testing (Optimistic Locking & ACID)
-To satisfy strict academic evaluation criteria for concurrency control and transactional ACID consistency, the bidding service uses SERIALIZABLE transaction isolation combined with entity versioning (@Version Long). Below is the official test suite with raw terminal executions and real backend console outputs:
+## Mandatory Seed Data & Multi-User Demo Switcher
+The database automatically seeds four test accounts and baseline auctions to validate solvency, escrow locking, self-bid blocking, and anti-sniping rules. You can switch between these accounts directly from the top navigation bar in the React UI:
 
-### TEST 1: Simultaneous Concurrency with Identical Amounts (TASK-028)
-Simulates two distinct users (User 2 and User 3) submitting identical bids ($150,000.00) within the exact same millisecond:
+* **Vendedor Demo (`ID: 1` - `vendedor@test.com`):** Seller account (Total Balance: `$0.00`). Used to create auctions and verify seller self-bid restrictions.
+* **Comprador Uno (`ID: 2` - `comprador1@test.com`):** Leading bidder (Total: `$150,000.00` | Locked: `$45,000.00` | Available: `$105,000.00`).
+* **Comprador Dos (`ID: 3` - `comprador2@test.com`):** Solvent bidder (Total: `$200,000.00` | Locked: `$0.00` | Available: `$200,000.00`).
+* **Usuario Sin Fondos (`ID: 4` - `sinfondos@test.com`):** Insolvent account (Total: `$500.00` | Available: `$500.00`) designed to test Escrow rejections.
+
+---
+
+## Event Contracts (Java <-> C# <-> React)
+
+| Java -> C# (`EventType`) | C# -> React (`SignalR Method`) | Real-Time Effect |
+| :--- | :--- | :--- |
+| `NewBid` | `ReceiveNewBid` | Updates current highest bid, leadership badge, bid feed, and Escrow balances. |
+| `Extended` | `AuctionTimeExtended` | Extends `END_DATE_UTC` by `+2 minutes` when a bid arrives in the final 60 seconds. |
+| `Closed` | `AuctionClosed` | Locks the bidding console, announces the winner, and settles wallet transfers (`DEBIT` / `CREDIT`). |
+
+---
+
+## Concurrency, Escrow & Outbox Stress Testing
+
+To validate ACID consistency, `SERIALIZABLE` isolation, optimistic locking (`@Version`), and resilient event delivery, execute the following verified test suite against the running stack:
+
+### TEST 1: Simultaneous Concurrency with Identical Amounts (Optimistic Locking)
+Simulates two users (`ID 2` and `ID 3`) submitting identical bids (`$160,000.00`) within the same millisecond:
 
 ```bash
-docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"AVAILABLE_BALANCE\" = 500000.00, \"TOTAL_BALANCE\" = 500000.00 WHERE \"USER_ID\" IN (2, 3); UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVAS', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '2 days' WHERE \"ID\" = 1;" && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 2, "amount": 150000.00}' & curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 3, "amount": 150000.00}' & wait
+docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"AVAILABLE_BALANCE\" = 500000.00, \"TOTAL_BALANCE\" = 500000.00, \"LOCKED_BALANCE\" = 0.00 WHERE \"USER_ID\" IN (2, 3); UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVE', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '2 days', \"VERSION\" = 0 WHERE \"ID\" = 1;" && (curl -s -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 2, "amount": 160000.00}' & curl -s -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 3, "amount": 160000.00}' & wait)
 ```
 
-Real Console Output:
-HTTP/1.1 409
-HTTP 409 Conflict: Otro postor ha enviado una puja superior simultáneamente.
-HTTP/1.1 200
-{"id":1,"sellerId":1,"currentWinnerId":2,"categoryId":1,"title":"Notebook Gamer de Prueba","description":"Test Concurrencia","startingPrice":100000.00,"currentPrice":150000.00,"minIncrement":5000.00,"status":"ACTIVAS","version":10}
-
-Mechanism: Both concurrent threads read the initial price simultaneously. Upon committing, the database detects the collision: the first thread succeeds (200 OK, version token increments to 10), and the concurrent thread fails serialization. Spring's controller intercepts the ConcurrencyFailureException and maps it cleanly to an HTTP 409 Conflict response.
+* **Verified Result:** One thread commits (`HTTP 200 OK`, incrementing entity `version`), while the colliding thread fails serialization and is mapped to `HTTP 409 Conflict`.
 
 ---
 
 ### TEST 2: Escrow Guarantee Rejection (Insufficient Balance)
-Evaluates an insolvent bidder (USER_ID = 4 with $500.00 available) trying to bid $150,000.00:
+Evaluates an insolvent bidder (`USER_ID = 4` with `$500.00` available) attempting to bid `$150,000.00`:
 
 ```bash
-docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"TOTAL_BALANCE\" = 500.00, \"AVAILABLE_BALANCE\" = 500.00, \"LOCKED_BALANCE\" = 0.00 WHERE \"USER_ID\" = 4; UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVAS', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '2 days' WHERE \"ID\" = 1;" && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 4, "amount": 150000.00}'
+docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"TOTAL_BALANCE\" = 500.00, \"AVAILABLE_BALANCE\" = 500.00, \"LOCKED_BALANCE\" = 0.00 WHERE \"USER_ID\" = 4; UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVE', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '2 days' WHERE \"ID\" = 1;" && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 4, "amount": 150000.00}'
 ```
 
-Real Console Output:
-HTTP/1.1 400
-Insufficient available balance to cover the bid amount.
-
-Mechanism: WalletService inspects the user's available funds prior to state modification. Because available balance is lower than the proposed bid, execution is halted with an HTTP 400 Bad Request.
+* **Verified Result:** `HTTP 400 Bad Request` (`Insufficient available balance to cover the bid amount.`), leaving database state untouched.
 
 ---
 
-### TEST 3: Anti-Sniping Rule (Automatic Time Extension)
-Tests a valid bid received within the critical 60-second window prior to auction closing:
+### TEST 3: Anti-Sniping Rule (Automatic UTC Time Extension)
+Tests a valid bid placed inside the critical 60-second window before auction expiration:
 
 ```bash
-docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"AVAILABLE_BALANCE\" = 500000.00, \"TOTAL_BALANCE\" = 500000.00 WHERE \"USER_ID\" = 3; UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVAS', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '45 seconds' WHERE \"ID\" = 1;" && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 3, "amount": 150000.00}' && echo -e "\n🔍 AUDITING EXTENSION IN DATABASE:" && docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "SELECT \"ID\", \"END_DATE_UTC\" AS \"NEW_EXTENDED_DATE\", \"CURRENT_PRICE\" FROM \"AUCTION\" WHERE \"ID\" = 1;"
+docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"AVAILABLE_BALANCE\" = 500000.00, \"TOTAL_BALANCE\" = 500000.00 WHERE \"USER_ID\" = 3; UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVE', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '45 seconds' WHERE \"ID\" = 1;" && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 3, "amount": 150000.00}' && docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "SELECT \"ID\", \"END_DATE_UTC\" AS \"NEW_EXTENDED_DATE\", \"CURRENT_PRICE\" FROM \"AUCTION\" WHERE \"ID\" = 1;"
 ```
 
-Real Console Output:
-HTTP/1.1 200
-{"id":1,"sellerId":1,"currentWinnerId":3,"categoryId":1,"title":"Notebook Gamer de Prueba","description":"Test Concurrencia","startingPrice":100000.00,"currentPrice":150000.00,"minIncrement":5000.00,"status":"ACTIVAS","version":11}
-
-🔍 AUDITING EXTENSION IN DATABASE:
- 1 | 2026-09-19 21:36:51.382567 | 150000.00
-
-Mechanism: Detecting that the auction is set to expire in 45 seconds, the service triggers the anti-sniping business rule, extending END_DATE_UTC by exactly 2 minutes directly in the database.
+* **Verified Result:** Java extends `END_DATE_UTC` by `+2 minutes`, logs the extension in `AUDIT_LOG`, and enqueues both `NewBid` and `Extended` events to broadcast the live timer update via SignalR.
 
 ---
 
-### TEST 4: Background Worker (Deserted Auction - TASK-022)
-Tests scheduled background processing of an expired auction without bids:
+### TEST 4: Escrow Fund Release & Wallet Clearing (Outbid Flow)
+Verifies atomic escrow lock (`LOCK`) and automatic release (`REFUND`) when a leading bidder is outbid:
 
 ```bash
-docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "INSERT INTO \"AUCTION\" (\"ID\", \"SELLER_ID\", \"CATEGORY_ID\", \"TITLE\", \"DESCRIPTION\", \"STARTING_PRICE\", \"CURRENT_PRICE\", \"MIN_INCREMENT\", \"START_DATE_UTC\", \"END_DATE_UTC\", \"STATUS\", \"VERSION\") VALUES (100, 1, 1, 'Subasta Desierta Test', 'Validating TASK-022', 50000.00, 50000.00, 2000.00, CURRENT_TIMESTAMP - INTERVAL '2 days', CURRENT_TIMESTAMP - INTERVAL '5 minutes', 'ACTIVAS', 0) ON CONFLICT (\"ID\") DO UPDATE SET \"STATUS\" = 'ACTIVAS', \"END_DATE_UTC\" = CURRENT_TIMESTAMP - INTERVAL '5 minutes', \"CURRENT_WINNER_ID\" = NULL;" && echo "⏳ Waiting 11 seconds for background worker..." && sleep 11 && echo -e "\n🔍 AUDITING FINAL STATUS FOR AUCTION 100:" && docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "SELECT \"ID\", \"TITLE\", \"STATUS\", \"CURRENT_WINNER_ID\" FROM \"AUCTION\" WHERE \"ID\" = 100;"
+docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"AVAILABLE_BALANCE\" = 500000.00, \"TOTAL_BALANCE\" = 500000.00, \"LOCKED_BALANCE\" = 0.00 WHERE \"USER_ID\" IN (2, 3); UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVE', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '2 days', \"CURRENT_WINNER_ID\" = NULL WHERE \"ID\" = 1;" && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 2, "amount": 150000.00}' && sleep 1 && curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 3, "amount": 160000.00}' && docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "SELECT \"USER_ID\", \"TOTAL_BALANCE\", \"AVAILABLE_BALANCE\", \"LOCKED_BALANCE\" FROM \"WALLET\" WHERE \"USER_ID\" IN (2, 3) ORDER BY \"USER_ID\";"
 ```
 
-Real Console Output:
-AUDITING FINAL STATUS FOR AUCTION 100:
-100 | Subasta Desierta Test | DESIERTAS | [null]
-
-Mechanism: The worker sweeps expired auctions periodically (10-second interval in dev environment). Since no winning bids exist, it shifts the record state to DESIERTAS without applying financial debits.
+* **Verified Result:** User `2` recovers full liquidity (`AVAILABLE_BALANCE = 500000.00`, `LOCKED_BALANCE = 0.00`) via a `REFUND` ledger entry, while User `3` has `$160,000.00` retained in `LOCKED_BALANCE`.
 
 ---
 
-### TEST 5: Escrow Fund Release & Guarantee Return (Wallet Clearing)
-Verifies atomic fund management when a leading bid is outbid:
+### TEST 5: Transactional Outbox & Java-to-.NET Event Relaying
+Verifies that bids persist an atomic event in `OUTBOX_EVENT` and the scheduled worker dispatches it to C# (`POST /api/internal/auctions/notify-event` with `X-Internal-Api-Key`):
 
 ```bash
-docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "UPDATE \"WALLET\" SET \"AVAILABLE_BALANCE\" = 500000.00, \"TOTAL_BALANCE\" = 500000.00, \"LOCKED_BALANCE\" = 0.00 WHERE \"USER_ID\" IN (2, 3); UPDATE \"AUCTION\" SET \"STATUS\" = 'ACTIVAS', \"CURRENT_PRICE\" = 100000.00, \"END_DATE_UTC\" = CURRENT_TIMESTAMP + INTERVAL '2 days', \"CURRENT_WINNER_ID\" = NULL WHERE \"ID\" = 1;" && curl -s -o /dev/null -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 2, "amount": 150000.00}' && sleep 1 && curl -s -o /dev/null -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 3, "amount": 160000.00}' && echo -e "\n🔍 AUDITING FINAL WALLET BALANCES:" && docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "SELECT \"USER_ID\", \"TOTAL_BALANCE\", \"AVAILABLE_BALANCE\", \"LOCKED_BALANCE\" FROM \"WALLET\" WHERE \"USER_ID\" IN (2, 3) ORDER BY \"USER_ID\";"
+curl -i -X POST http://localhost:8080/api/auctions/1/bids -H "Content-Type: application/json" -d '{"bidderId": 2, "amount": 170000.00}' && sleep 6 && docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "SELECT \"EVENT_ID\", \"EVENT_TYPE\", \"STATUS\", \"ATTEMPTS\" FROM \"OUTBOX_EVENT\" ORDER BY \"CREATED_AT_UTC\" DESC LIMIT 5;"
 ```
 
-Real Console Output:
-🔍 AUDITING FINAL WALLET BALANCES:
-USER_ID | TOTAL_BALANCE | AVAILABLE_BALANCE | LOCKED_BALANCE
---------+---------------+-------------------+----------------
-      2 |     500000.00 |         500000.00 |           0.00
-      3 |     500000.00 |         340000.00 |      160000.00
-(2 rows)
-
-Mechanism: Upon receiving User 3's higher bid ($160,000.00), the system automatically locks User 3's guarantee while releasing User 2's previous escrow lock in the same atomic transaction (LOCKED_BALANCE returns to 0.00 and AVAILABLE_BALANCE returns to 500000.00).
+* **Verified Result:** Java dispatches the `PENDING` event to port `5273`, C# responds with `202 Accepted` and broadcasts via SignalR, and the event transitions to `SENT` (`ATTEMPTS = 1`).
 
 ---
 
-### Authors
-* Mateo Agustín Valencia Cortez
-* Mía Valentina Politano
+### TEST 6: Outbox Resilience & Retry Recovery (C# Downtime Simulation)
+Demonstrates zero event loss when the .NET relay service is temporarily offline:
+
+1. Stop the C# backend (`Ctrl + C` on `dotnet run`).
+2. Insert a pending event into `OUTBOX_EVENT`:
+
+```bash
+docker exec -i subastaya_db psql -U postgres -d subastaya_db -c "INSERT INTO \"OUTBOX_EVENT\" (\"EVENT_ID\", \"EVENT_TYPE\", \"AGGREGATE_ID\", \"PAYLOAD_JSON\", \"STATUS\", \"ATTEMPTS\", \"NEXT_ATTEMPT_AT\", \"CREATED_AT_UTC\") VALUES (gen_random_uuid(), 'NewBid', 1, '{\"EventId\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\", \"AuctionId\": 1, \"EventType\": \"NewBid\", \"NewAmount\": 180000, \"BidderId\": 2, \"BidderUsername\": \"User_2\", \"EventTimestampUtc\": \"2026-11-12T18:00:00Z\"}', 'PENDING', 0, NOW(), NOW());"
+```
+
+3. Verify Java catches the connection failure, increments `ATTEMPTS`, and schedules `NEXT_ATTEMPT_AT` with exponential backoff without rolling back the bid.
+4. Restart C# (`dotnet run`) and confirm the worker automatically delivers the queued event and marks it as `SENT`.
+
+---
+
+### TEST 7: Internal Webhook Security & Contract Validation (`401` & `400`)
+Validates that C# protects `/api/internal/auctions/notify-event` against unauthorized callers and malformed payloads:
+
+```bash
+# 1. Invalid or missing API Key -> Verified: 401 Unauthorized
+curl -i -X POST http://localhost:5273/api/internal/auctions/notify-event -H "Content-Type: application/json" -H "X-Internal-Api-Key: wrong-key" -d '{}'
+
+# 2. Unsupported EventType -> Verified: 400 Bad Request
+curl -i -X POST http://localhost:5273/api/internal/auctions/notify-event -H "Content-Type: application/json" -H "X-Internal-Api-Key: java73" -d '{"EventId": "a2936cac-79a6-4d33-9473-8963b90e75e9", "AuctionId": 1, "EventType": "SuperBidInvalidType", "NewAmount": 99999, "BidderId": 1, "BidderUsername": "HackerMan", "EventTimestampUtc": "2026-11-12T18:00:00Z"}'
+```
+
+---
+
+## Authors
+* **Mateo Agustín Valencia Cortez**
+* **Mía Valentina Politano**
 
 ## License
-This project is intended strictly for academic and private use (Universidad Nacional Arturo Jauretche).
+This project is intended strictly for academic and private evaluation (Universidad Nacional Arturo Jauretche).
